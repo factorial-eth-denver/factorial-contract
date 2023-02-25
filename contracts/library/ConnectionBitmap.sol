@@ -3,7 +3,7 @@ pragma solidity >=0.5.0;
 
 import "./BitMath.sol";
 
-library OccupationBitmap {
+library ConnectionBitmap {
     using BitMath for uint;
 
     function toIdx(uint16 _contractId) internal pure returns (uint8 bitMapIdx, uint8 bitIdx) {
@@ -34,6 +34,7 @@ library OccupationBitmap {
         uint maxBitmapId
     ) internal view returns (uint16 nextContractId){
         (uint8 bitMapIdx, uint8 bitIdx) = toIdx(currentContractId);
+        uint curBitmap;
         uint curBitmap;
         while (true) {
             curBitmap = self[bitMapIdx];
