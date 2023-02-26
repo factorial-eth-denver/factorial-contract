@@ -17,21 +17,27 @@ contract Tokenization is ITokenization, ERC1155Upgradeable, OwnableUpgradeable, 
     struct VariableCache {
         address caller;
         uint24 tokenType;
-        uint24 slippage;
-        uint256 initialValue;
+        uint256 maximumLoss;
+        uint256 inputValue;
+        uint256 outputValue;
     }
 
     /// ----- VARIABLE STATES -----
     VariableCache public cache;
     mapping(uint24 => address) private tokenTypeSpecs;
     mapping(uint256 => uint256) private wrappingRelationship;
-    mapping(uint24 => address) public connectionPoolBitmap;
-    mapping(uint24 => address) public connectionPoolBitmap;
+    mapping(address => bool) public factorialModules;
 
 
     /// @dev Throws if called by not router.
     modifier onlySpec() {
         require(msg.sender == tokenTypeSpecs[cache.tokenType], 'Only spec');
+        _;
+    }
+
+    /// @dev Throws if called by not router.
+    modifier onlyFactorialModule() {
+        require(factorialModules[msg.sender], 'Only factorial module');
         _;
     }
 
@@ -57,63 +63,14 @@ contract Tokenization is ITokenization, ERC1155Upgradeable, OwnableUpgradeable, 
         IWrapper(tokenTypeSpecs[tokenType]).unwrap(_tokenId, _amount);
     }
 
-    function trigger(uint _tokenId, bytes calldata _param) external override{
-        uint24 tokenType = uint24(_tokenId >> 232);
-        ITrigger(tokenTypeSpecs[tokenType]).trigger(_tokenId, _param);
-    }
-
-    function getValue(uint _tokenId, uint _amount) external view override returns (uint) {
+    function getValue(uint _tokenId, uint _amount) public view override returns (uint) {
         uint24 tokenType = uint24(_tokenId >> 232);
         return IWrapper(tokenTypeSpecs[tokenType]).getValue(_tokenId, _amount);
     }
 
-    /// Callback Functions
-    function doTransferIn(uint256 _tokenId, uint256 _amount) external override onlySpec {
-        uint24 tokenType = uint24(_tokenId >> 232);
-        if (tokenType == 0) {
-            IERC20Upgradeable(address(uint160(_tokenId))).safeTransferFrom(cache.caller, address(this), _amount);
-            _mint(msg.sender, _tokenId, _amount, "");
-        } else {
-            safeTransferFrom(cache.caller, msg.sender, _tokenId, _amount, '');
-        }
-    }
-
-    function doTransferInBatch(uint256[] calldata _tokenIds, uint256[] calldata _amounts) external override onlySpec {
-        require(_tokenIds.length == _amounts.length, 'Invalid param');
-        for (uint i = 0; i < _tokenIds.length; i++) {
-            uint24 tokenType = uint24(_tokenIds[i] >> 232);
-            if (tokenType == 0) {
-                IERC20Upgradeable(address(uint160(_tokenIds[i]))).safeTransferFrom(cache.caller, address(this), _amounts[i]);
-                _mint(msg.sender, _tokenIds[i], _amounts[i], "");
-            } else {
-                safeTransferFrom(cache.caller, msg.sender, _tokenIds[i], _amounts[i], '');
-            }
-        }
-    }
-
-    function doTransferOut(address recipient, uint256 _tokenId, uint256 _amount) external override onlySpec {
-        uint24 tokenType = uint24(_tokenId >> 232);
-        if (recipient == address(0)) recipient = cache.caller;
-        if (tokenType == 0) {
-            IERC20Upgradeable(address(uint160(_tokenId))).safeTransfer(recipient, _amount);
-            _burn(msg.sender, _tokenId, _amount);
-        } else {
-            _safeTransferFrom(msg.sender, recipient, _tokenId, _amount, '');
-        }
-    }
-
-    function doTransferOutBatch(address recipient, uint256[] calldata _tokenIds, uint256[] calldata _amounts) external override onlySpec {
-        require(_tokenIds.length == _amounts.length, 'Invalid param');
-        if (recipient == address(0)) recipient = cache.caller;
-        for (uint i = 0; i < _tokenIds.length; i++) {
-            uint24 tokenType = uint24(_tokenIds[i] >> 232);
-            if (tokenType == 0) {
-                IERC20Upgradeable(address(uint160(_tokenIds[i]))).safeTransfer(recipient, _amounts[i]);
-                _burn(msg.sender, _tokenIds[i], _amounts[i]);
-            } else {
-                _safeTransferFrom(msg.sender, recipient, _tokenIds[i], _amounts[i], '');
-            }
-        }
+    function transferERC20(uint _tokenId, uint _amount, address _to) external onlyFactorialModule {
+        require(_tokenId >> 160 == 0, 'Not ERC20');
+        IERC20Upgradeable(address(uint160(_tokenId))).safeTransfer(_to, _amount);
     }
 
     function mintCallback(uint256 _sequentialN, uint256 _amount) public override onlySpec returns (uint){
@@ -126,23 +83,71 @@ contract Tokenization is ITokenization, ERC1155Upgradeable, OwnableUpgradeable, 
         _burn(cache.caller, _tokenId, _amount);
     }
 
-    /// View functions
-    function caller() external override view returns (address) {
-        return cache.caller;
+    /**
+     * @dev See {IERC1155-safeTransferFrom}.
+     */
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes memory data
+    ) public override {
+        require(
+            from == _msgSender() || from == cache.caller,
+            "ERC1155: caller is not token owner or caller"
+        );
+        if (from == cache.caller) {
+            cache.inputValue += getValue(id, amount);
+        } else if (to == cache.caller) {
+            cache.outputValue += getValue(id, amount);
+        }
+        if (from == cache.caller && (id >> 160) == 0) {
+            IERC20Upgradeable(address(uint160(id))).safeTransferFrom(cache.caller, address(this), amount);
+            _mint(to, id, amount, '');
+        } else if (to == cache.caller && (id >> 160) == 0) {
+            IERC20Upgradeable(address(uint160(id))).safeTransfer(cache.caller, amount);
+            _burn(from, id, amount);
+        } else {
+            _safeTransferFrom(from, to, id, amount, data);
+        }
     }
 
-    function beforeWrap(uint _inputToken, uint _amount, uint24 _slippage) external {
-        cache.caller = msg.sender;
-        cache.tokenType = uint24(_inputToken >> 232);
-        cache.slippage = _slippage;
-        cache.initialValue += tokenization.getValue(_inputToken, _amount);
-    }
-
-    function afterWrap(uint _outPutToken, uint _amount) external {
-        uint afterValue = tokenization.getValue(_inputToken, _amount);
-        require(afterValue > cache.initialValue * (10000 - uint256(cache.slippage)));
-        cache.caller = address(0);
-        cache.tokenType = 0;
-        cache.initialValue = 0;
+    /**
+     * @dev See {IERC1155-safeBatchTransferFrom}.
+     */
+    function safeBatchTransferFrom(
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) public override {
+        require(
+            from == _msgSender() || from == cache.caller,
+            "ERC1155: caller is not token owner or caller"
+        );
+        uint256[] memory newIds;
+        uint256[] memory newAmounts;
+        for (uint idx = 0; idx < ids; idx++) {
+            uint id = ids[idx];
+            uint amount = amounts[idx];
+            if (from == cache.caller) {
+                cache.inputValue += getValue(id, amount);
+            } else if (to == cache.caller) {
+                cache.outputValue += getValue(id, amount);
+            }
+            if (from == cache.caller && (id >> 160) == 0) {
+                IERC20Upgradeable(address(uint160(id))).safeTransferFrom(cache.caller, address(this), amount);
+                _mint(to, id, amount, '');
+            } else if (to == cache.caller && (id >> 160) == 0) {
+                IERC20Upgradeable(address(uint160(id))).safeTransfer(cache.caller, amount);
+                _burn(from, id, amount);
+            } else {
+                newIds.push(id);
+                newAmounts.push(amount);
+            }
+        }
+        _safeBatchTransferFrom(from, to, newIds, newAmounts, data);
     }
 }
