@@ -19,7 +19,7 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using MathUpgradeable for uint256;
 
-    struct DebtNFT {
+    struct DebtToken {
         uint256 collateralToken;
         uint256 collateralAmount;
         address liquidationModule;
@@ -31,7 +31,7 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
     }
 
     mapping(address => TokenFactors) public tokenFactors; // Mapping from token address to oracle info.
-    mapping(uint256 => DebtNFT) private tokenInfos;
+    mapping(uint256 => DebtToken) private tokenInfos;
     ITokenization public tokenization;
     IAsset public asset;
     uint256 private sequentialN;
@@ -61,7 +61,7 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
         );
 
         uint tokenId = tokenization.mintCallback(sequentialN++, 1);
-        tokenInfos[tokenId] = DebtNFT(
+        tokenInfos[tokenId] = DebtToken(
             collateralToken,
             collateralAmount,
             liquidationModule
@@ -69,15 +69,15 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
     }
 
     function unwrap(uint _tokenId, uint _amount) external override onlyTokenization {
-        DebtNFT memory nft = tokenInfos[_tokenId];
+        DebtToken memory nft = tokenInfos[_tokenId];
         ITokenization(tokenization).burnCallback(_tokenId, 1);
         IMortgage(address(uint160(_tokenId))).repay(_tokenId);
         asset.safeTransferFrom(address(this), msg.sender, nft.collateralToken, _amount, '');
         delete tokenInfos[_tokenId];
     }
 
-    function getValue(uint _tokenId, uint _amount) public view override returns (uint){
-        DebtNFT memory nft = tokenInfos[_tokenId];
+    function getValue(uint _tokenId, uint) public view override returns (uint){
+        DebtToken memory nft = tokenInfos[_tokenId];
         uint collateralValue = tokenization.getValue(nft.collateralToken, nft.collateralAmount);
         (uint debtTokenType, uint debtAmount) = IMortgage(address(uint160(_tokenId))).getDebt(_tokenId);
         if (collateralValue < (debtTokenType * debtAmount)) {

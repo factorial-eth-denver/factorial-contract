@@ -10,13 +10,13 @@ import "../../../interfaces/external/IUniswapV2Pair.sol";
 contract UniswapV2Oracle is IPriceOracle {
     IPriceOracle public immutable source;
 
-    constructor(address _source) public {
+    constructor(address _source) {
         source = IPriceOracle(_source);
     }
 
     using MathUpgradeable for uint256;
 
-    function getPrice(address token) external view returns (uint price) {
+    function getPrice(address) external pure returns (uint price) {
         return 0;
     }
 

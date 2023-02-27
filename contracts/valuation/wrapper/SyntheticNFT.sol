@@ -18,12 +18,12 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable 
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using MathUpgradeable for uint256;
 
-    struct SyntheticNFT {
+    struct SynthNFT {
         uint256[] underlyingTokens;
         uint256[] underlyingAmounts;
     }
 
-    mapping(uint256 => SyntheticNFT) private tokenInfos;
+    mapping(uint256 => SynthNFT) private tokenInfos;
     ITokenization public tokenization;
     IAsset public asset;
     uint256 public sequentialN;
@@ -51,7 +51,7 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable 
         asset.safeBatchTransferFrom(tokenization.caller(), address(this), tokens, amounts, '');
         uint tokenId = tokenization.mintCallback(sequentialN++, 1);
 
-        SyntheticNFT storage token = tokenInfos[tokenId];
+        SynthNFT storage token = tokenInfos[tokenId];
 
         for (uint i = 0; i < tokens.length; i ++) {
             token.underlyingTokens.push(tokens[i]);
@@ -59,16 +59,15 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable 
         }
     }
 
-    function unwrap(uint _tokenId, uint _amount) external override onlyTokenization {
-        SyntheticNFT memory nft = tokenInfos[_tokenId];
-        uint256[] memory amounts = nft.underlyingAmounts;
+    function unwrap(uint _tokenId, uint) external override onlyTokenization {
+        SynthNFT memory nft = tokenInfos[_tokenId];
         asset.safeBatchTransferFrom(address(this), tokenization.caller(), nft.underlyingTokens, nft.underlyingAmounts, '');
         ITokenization(tokenization).burnCallback(_tokenId, 1);
         delete tokenInfos[_tokenId];
     }
 
-    function getValue(uint _tokenId, uint _amount) public view override returns (uint){
-        SyntheticNFT memory token = tokenInfos[_tokenId];
+    function getValue(uint _tokenId, uint) public view override returns (uint){
+        SynthNFT memory token = tokenInfos[_tokenId];
         uint totalValue = 0;
         for (uint i = 0; i < token.underlyingTokens.length; i ++) {
             totalValue += tokenization.getValue(token.underlyingTokens[i], token.underlyingAmounts[i]);

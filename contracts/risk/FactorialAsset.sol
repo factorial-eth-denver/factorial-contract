@@ -7,13 +7,14 @@ import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "../connector_module/library/SafeCastUint256.sol";
+import "../connector/library/SafeCastUint256.sol";
+
 import "../../interfaces/ITokenization.sol";
 import "../../interfaces/ITrigger.sol";
 import "../../interfaces/IWrapper.sol";
 import "../../interfaces/IAsset.sol";
 
-contract FactorialAsset is IAsset, ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeable {
+contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeCastUint256 for uint256;
 
@@ -52,7 +53,7 @@ contract FactorialAsset is IAsset, ERC1155Upgradeable, OwnableUpgradeable, UUPSU
         tokenization = ITokenization(_tokenization);
     }
 
-    function mint(address _to, uint _tokenId, uint _amount) public override onlyFactorialModule {
+    function mint(address _to, uint _tokenId, uint _amount) public onlyFactorialModule {
         _mint(_to, _tokenId, _amount, "");
     }
 
@@ -161,7 +162,7 @@ contract FactorialAsset is IAsset, ERC1155Upgradeable, OwnableUpgradeable, UUPSU
         address _to,
         address _id,
         uint256 _amount
-    ) public override {
+    ) public {
         safeTransferFrom(_from, _to, uint256(uint160(_id)), _amount, '');
     }
 

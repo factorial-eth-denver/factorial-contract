@@ -11,13 +11,13 @@ import "../interfaces/ITrigger.sol";
 import "../interfaces/IWrapper.sol";
 import "../interfaces/IAsset.sol";
 
-import "./valuation_module/Tokenization.sol";
+import "./valuation/Tokenization.sol";
 
 /// It route to application.
 contract FactorialRouter {
     IAsset public asset;
 
-    constructor(address _asset) public {
+    constructor(address _asset) {
         asset = IAsset(_asset);
     }
 
@@ -34,10 +34,10 @@ contract FactorialRouter {
     /// @param _maximumLoss The maximum loss slippage
     /// @param _targetArray The target array used in the call.
     /// @param _dataArray The data array used in the call.
-    function executeBatch(uint256 _maximumLoss,  address[] calldata targetArray, bytes[] calldata _dataArray) external {
+    function executeBatch(uint256 _maximumLoss, address[] calldata _targetArray, bytes[] calldata _dataArray) external {
         asset.beforeExecute(_maximumLoss);
         for (uint256 idx = 0; idx < _dataArray.length; idx ++) {
-            executeInternal(targetArray[idx], _dataArray[idx]);
+            executeInternal(_targetArray[idx], _dataArray[idx]);
         }
         asset.afterExecute();
     }

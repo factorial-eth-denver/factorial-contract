@@ -45,6 +45,10 @@ contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable {
         tokenTypeSpecs[_tokenType] = _tokenTypeSpec;
     }
 
+    function caller() external view returns (address) {
+        return cache.wrapCaller;
+    }
+
     /// External Functions
     function wrap(uint24 _wrapperType, bytes calldata _param) external override {
         IWrapper(tokenTypeSpecs[_wrapperType]).wrap(_param);

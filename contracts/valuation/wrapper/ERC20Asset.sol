@@ -27,11 +27,11 @@ contract ERC20Asset is IWrapper, OwnableUpgradeable {
         tokenization = ITokenization(_tokenization);
     }
 
-    function wrap(bytes memory _param) external override {
+    function wrap(bytes memory) external pure override {
         revert('Not supported');
     }
 
-    function unwrap(uint tokenId, uint amount) external override{
+    function unwrap(uint, uint) external pure override {
         revert('Not supported');
     }
 

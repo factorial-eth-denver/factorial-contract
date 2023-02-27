@@ -18,13 +18,13 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using MathUpgradeable for uint256;
 
-    struct SyntheticFT {
+    struct SynthFT {
         uint256[] underlyingTokens;
         uint256[] underlyingAmounts;
         uint256 totalSupply; // If NFT, Unnecessary gas cost
     }
 
-    mapping(uint256 => SyntheticFT) public tokenInfos;
+    mapping(uint256 => SynthFT) public tokenInfos;
     ITokenization public tokenization;
     IAsset public asset;
     uint256 public sequentialN;
@@ -43,18 +43,18 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable {
     }
 
     function wrap(bytes calldata _param) external override onlyTokenization {
-        (uint256[] memory tokens, uint256[] memory amounts, uint256 sequentialN, uint256 mintAmount)
+        (uint256[] memory tokens, uint256[] memory amounts, uint256 _sequentialN, uint256 mintAmount)
         = abi.decode(_param, (uint256[], uint256[], uint256, uint256));
 
         asset.safeBatchTransferFrom(tokenization.caller(),address(this),  tokens, amounts, '');
         uint tokenId;
-        if (sequentialN == 0) {
+        if (_sequentialN == 0) {
             tokenId = tokenization.mintCallback(sequentialN++, mintAmount);
         } else {
-            tokenId = tokenization.mintCallback(sequentialN, mintAmount);
+            tokenId = tokenization.mintCallback(_sequentialN, mintAmount);
         }
 
-        SyntheticFT storage ft = tokenInfos[tokenId];
+        SynthFT storage ft = tokenInfos[tokenId];
         ft.totalSupply += mintAmount;
         for (uint i = 0; i < tokens.length; i ++) {
             if (ft.underlyingTokens.length <= i) {
@@ -68,7 +68,7 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable {
     }
 
     function unwrap(uint _tokenId, uint _amount) external override onlyTokenization {
-        SyntheticFT memory ft = tokenInfos[_tokenId];
+        SynthFT memory ft = tokenInfos[_tokenId];
         uint256[] memory amounts = new uint256[](ft.underlyingAmounts.length);
         for (uint i = 0; i < amounts.length; i++) {
             amounts[i] = ft.underlyingAmounts[i] * _amount / ft.totalSupply;
@@ -82,7 +82,7 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable {
     }
 
     function getValue(uint _tokenId, uint _amount) public view override returns (uint){
-        SyntheticFT memory token = tokenInfos[_tokenId];
+        SynthFT memory token = tokenInfos[_tokenId];
         uint totalValue = 0;
         for (uint i = 0; i < token.underlyingTokens.length; i ++) {
             totalValue += tokenization.getValue(token.underlyingTokens[i], token.underlyingAmounts[i]);
