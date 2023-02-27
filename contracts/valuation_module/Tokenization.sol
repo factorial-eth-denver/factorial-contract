@@ -62,7 +62,7 @@ contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable {
 
     function mintCallback(uint256 _sequentialN, uint256 _amount) public override onlySpec returns (uint){
         uint256 tokenId = (uint256(cache.tokenType) << 232) + (_sequentialN << 160) + uint256(uint160(cache.wrapCaller));
-        asset.mint(cache.wrapCaller, tokenId, _amount, "");
+        asset.mint(cache.wrapCaller, tokenId, _amount);
         return tokenId;
     }
 

@@ -45,7 +45,7 @@ contract ConnectionPool is IConnectionPool, OwnableUpgradeable {
     }
 
     function isRegisteredConnector(address _connector) external override view returns (bool) {
-        return connectors[_connector];
+        return connectors[_connector] != 0;
     }
 
     function getConnectionAddress(uint _connectionId) external override view returns (address) {

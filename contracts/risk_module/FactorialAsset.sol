@@ -7,12 +7,15 @@ import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
+import "../connector_module/library/SafeCastUint256.sol";
 import "../../interfaces/ITokenization.sol";
 import "../../interfaces/ITrigger.sol";
 import "../../interfaces/IWrapper.sol";
+import "../../interfaces/IAsset.sol";
 
-contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeable {
+contract FactorialAsset is IAsset, ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeCastUint256 for uint256;
 
     struct VariableCache {
         address caller;
@@ -151,5 +154,25 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
             }
         }
         _safeBatchTransferFrom(_from, _to, _ids, _amounts, _data);
+    }
+
+    function safeTransferFrom(
+        address _from,
+        address _to,
+        address _id,
+        uint256 _amount
+    ) public override {
+        safeTransferFrom(_from, _to, uint256(uint160(_id)), _amount, '');
+    }
+
+    function balanceOf(address account, uint256 id) public view override returns (uint256) {
+        require(account != address(0), "ERC1155: address zero is not a valid owner");
+
+        if (id >> 160 == 0) {
+            if (account == cache.caller || factorialModules[account]) {
+                return IERC20Upgradeable(id.toAddress()).balanceOf(account);
+            }
+        }
+        return balanceOf(account, id);
     }
 }

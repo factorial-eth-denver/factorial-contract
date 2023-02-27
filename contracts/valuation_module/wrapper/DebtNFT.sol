@@ -15,7 +15,7 @@ import "../../../interfaces/ITrigger.sol";
 import "../../../interfaces/ILiquidation.sol";
 import "../../../interfaces/IAsset.sol";
 
-contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper, ITrigger {
+contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using MathUpgradeable for uint256;
 
