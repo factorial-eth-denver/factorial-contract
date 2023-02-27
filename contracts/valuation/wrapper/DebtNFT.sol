@@ -36,7 +36,7 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
     IAsset public asset;
     uint256 private sequentialN;
 
-    /// @dev Throws if called by not valuation_module module.
+    /// @dev Throws if called by not valuation module.
     modifier onlyTokenization() {
         require(msg.sender == address(tokenization), 'Only tokenization');
         _;
