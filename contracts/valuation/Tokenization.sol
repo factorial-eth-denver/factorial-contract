@@ -11,8 +11,9 @@ import "../../interfaces/ITokenization.sol";
 import "../../interfaces/ITrigger.sol";
 import "../../interfaces/IWrapper.sol";
 import "../../interfaces/IAsset.sol";
+import "../utils/FactorialContext.sol";
 
-contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable {
+contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable, FactorialContext {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct VariableCache {
@@ -24,17 +25,16 @@ contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable {
     VariableCache public cache;
     mapping(uint24 => address) private tokenTypeSpecs;
     mapping(uint256 => uint256) private wrappingRelationship;
-    IAsset public asset;
 
     /// @dev Throws if called by not router.
     modifier onlySpec() {
-        require(msg.sender == tokenTypeSpecs[cache.tokenType], 'Only spec');
+        require(msgSender() == tokenTypeSpecs[cache.tokenType], 'Only spec');
         _;
     }
 
     /// @dev Throws if called by not router.
     modifier writeCache(uint24 _wrapperType) {
-        cache.wrapCaller = msg.sender;
+        cache.wrapCaller = msgSender();
         cache.tokenType = _wrapperType;
         _;
         cache.wrapCaller = address(0);
@@ -44,9 +44,8 @@ contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable {
     /// @dev required by the OZ UUPS module
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
-    function initialize(address _asset) external initializer {
+    function initialize(address _asset) external initializer initContext(_asset){
         __Ownable_init();
-        asset = IAsset(_asset);
     }
 
     function registerTokenType(uint24 _tokenType, address _tokenTypeSpec) external onlyOwner {
