@@ -34,4 +34,5 @@ interface IAsset {
     ) external;
 
     function balanceOf(address account, uint256 id) external view returns (uint256);
+    function caller() external view returns (address);
 }

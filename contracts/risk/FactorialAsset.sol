@@ -63,6 +63,10 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
         tokenization = ITokenization(_tokenization);
     }
 
+    function caller() external view returns (address) {
+        return cache.caller;
+    }
+
     function mint(address _to, uint _tokenId, uint _amount) public onlyFactorialModule {
         _mint(_to, _tokenId, _amount, "");
     }
