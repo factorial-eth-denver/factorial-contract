@@ -2,5 +2,5 @@
 pragma solidity ^0.8.0;
 
 interface ILiquidationModule {
-    function execute() external returns (bool);
+    function execute(address, bytes calldata value) external;
 }

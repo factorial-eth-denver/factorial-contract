@@ -1,25 +1,37 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "../../Tokenization.sol";
-import "../../wrapper/DebtNFT.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import "../../../interfaces/ILiquidationModule.sol";
+import "../../../interfaces/IAsset.sol";
+import "../../../interfaces/ILending.sol";
+
+import "../../valuation/Tokenization.sol";
+import "../../valuation/wrapper/DebtNFT.sol";
 import "../Liquidation.sol";
 
 // Uncomment this line to use console.log
 // import "hardhat/console.sol";
 
-contract LiquidationAuction is ILiquidationExecutor {
+contract LiquidationAuction is ILiquidationModule {
     Liquidation public liquidation;
     Tokenization public tokenization;
     DebtNFT public debtNFT;
     Auction[] public auctions;
+    IAsset public asset;
 
     struct Auction {
         uint256 positionId;
         uint256 endTime;
+        uint256 bidAmount;
         address bidder;
-        address bidAmount;
         bool isEnd;
+    }
+
+    struct ExecuteParams {
+        uint256 positionId;
+        uint256 period;
     }
 
     constructor(address _tokenization, address _debtNFT) {
@@ -27,30 +39,46 @@ contract LiquidationAuction is ILiquidationExecutor {
         debtNFT = DebtNFT(_debtNFT);
     }
 
-    function execute(uint256 positionId, uint256 endTime) public {
-        (
-            uint256 collateralToken,
-            uint256 collateralAmount,
-            address liquidationModule
-        ) = debtNFT.tokenInfos(positionId);
+    function execute(address liquidator, bytes calldata data) public {
+        ExecuteParams memory params = abi.decode(data, (ExecuteParams));
+        // (
+        //     uint256 collateralToken,
+        //     uint256 collateralAmount,
+        //     address liquidationModule
+        // ) = debtNFT.tokenInfos(params.positionId);
 
-        auctions.push(Auction(positionId, endTime, address(0), 0, false));
+        auctions.push(
+            Auction(
+                params.positionId,
+                block.timestamp + params.period,
+                0,
+                address(0),
+                false
+            )
+        );
     }
 
     function bid(uint256 positionId, uint256 amount) public {
-        (
-            uint256 collateralToken,
-            uint256 collateralAmount,
-            address liquidationModule
-        ) = debtNFT.tokenInfos(positionId);
+        ILending lending = ILending(address(uint160(positionId)));
+        ILending.BorrowInfo memory borrowInfo = lending.getBorrowInfo(
+            positionId
+        );
+
         Auction storage auction = auctions[positionId];
         require(auction.bidAmount > amount, "TS");
         require(auction.endTime > block.timestamp, "AE");
         if (auction.bidder != address(0)) {
             // return
-            tokenization.transfer(collateralToken, auction.bidAmount);
+            IERC20(borrowInfo.debtAsset).transfer(
+                auction.bidder,
+                auction.bidAmount
+            );
         }
-        tokenization.transferFrom(msg.sender, collateralToken, amount);
+        IERC20(borrowInfo.debtAsset).transferFrom(
+            msg.sender,
+            address(this),
+            amount
+        );
         auction.bidder = msg.sender;
         auction.bidAmount = amount;
     }
@@ -67,10 +95,10 @@ contract LiquidationAuction is ILiquidationExecutor {
             address liquidationModule
         ) = debtNFT.tokenInfos(positionId);
 
-        address[] inAccounts = new address[](1);
-        uint256[] inAmounts = new uint256[](1);
-        address[] outAccounts = new address[](2);
-        uint256[] outAmounts = new uint256[](2);
+        address[] memory inAccounts = new address[](1);
+        uint256[] memory inAmounts = new uint256[](1);
+        address[] memory outAccounts = new address[](1);
+        uint256[] memory outAmounts = new uint256[](1);
 
         inAccounts[0] = address(this);
         inAmounts[0] = auction.bidAmount;
