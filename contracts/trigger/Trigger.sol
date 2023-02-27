@@ -2,14 +2,15 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "../Tokenization.sol";
-import "./interfaces/ITriggerLogic.sol";
+import "../valuation/Tokenization.sol";
+import "../../interfaces/ITriggerLogic.sol";
 
 // Uncomment this line to use console.log
 // import "hardhat/console.sol";
 
 contract Trigger {
     Tokenization public tokenization;
+    IAsset public asset;
 
     //  16 bit = triggerLogicId
     // 240 bit = triggerId
@@ -26,7 +27,7 @@ contract Trigger {
 
     // mapping key를 따로 뺄지는 나중에 정하기.
     struct TriggerInfo {
-        uint256 owner;
+        address owner;
         uint256 initialValue;
         uint256 collateralToken;
         uint256 collateralAmount;
@@ -37,8 +38,9 @@ contract Trigger {
         bytes triggerCalldata;
     }
 
-    constructor(uint _tokenization) payable {
+    constructor(address _tokenization, address _asset) payable {
         tokenization = Tokenization(_tokenization);
+        asset = IAsset(_asset);
     }
 
     function addTriggerLogic(address triggerLogic) public {
@@ -48,38 +50,44 @@ contract Trigger {
     }
 
     function registerTrigger(
-        uint256 triggerLogicId,
         uint256 collateralToken,
         uint256 collateralAmount,
-        bytes triggerCheckData,
+        uint256 triggerLogicId,
+        bytes calldata triggerCheckData,
         address triggerTarget,
-        bytes triggerCalldata
+        bytes calldata triggerCalldata
     ) public {
-        require(msg.sender == tokenization.ownerOf(collateralToken), "E1");
-        require(triggerLogics[triggerLogicId] != address(0), "NE");
+        require(
+            asset.balanceOf(msg.sender, collateralToken) > collateralAmount,
+            "E1"
+        );
+        require(address(triggerLogics[triggerLogicId]) != address(0), "NE");
 
         uint256 _initialValue = tokenization.getValue(
             collateralToken,
             collateralAmount
         );
 
-        triggerInfos.push(
-            TriggerInfo(
-                msg.sender,
-                _initialValue,
-                collateralToken,
-                collateralAmount,
-                triggerCheckData,
-                false,
-                false,
-                triggerTarget,
-                triggerCalldata
-            )
+        uint256 triggerKey = triggerLogicId << 240;
+        triggerKey += triggerLastIndex[triggerLogicId];
+        triggerLastIndex[triggerLogicId]++;
+
+        triggerInfos[triggerKey] = TriggerInfo(
+            msg.sender,
+            _initialValue,
+            collateralToken,
+            collateralAmount,
+            triggerCheckData,
+            false,
+            false,
+            triggerTarget,
+            triggerCalldata
         );
 
-        emit RegisterTrigger(triggerInfos.length - 1);
+        emit RegisterTrigger(triggerKey);
     }
 
+    // owner가 적혀야되는지 정확한 판단되는지 청산취소못하게 되는지.
     function cancelTrigger(uint256 triggerId) public {
         TriggerInfo storage triggerInfo = triggerInfos[triggerId];
 
@@ -89,15 +97,14 @@ contract Trigger {
         emit CancelTrigger(triggerId);
     }
 
-    // 고민해야하는게 어떤에러가 뜨느냐에 따라서 지우거나 해야함.
     function executeTrigger(uint256 triggerId) public {
         TriggerInfo storage triggerInfo = triggerInfos[triggerId];
         require(triggerInfo.isCanceled == false, "E3");
         require(triggerInfo.isExectued == false, "E4");
-
+        uint256 triggerLogicId = triggerId >> 240;
         uint256 currentValue = tokenization.getValue(
-            collateralToken,
-            collateralAmount
+            triggerInfo.collateralToken,
+            triggerInfo.collateralAmount
         );
 
         bool isExecutable = triggerLogics[triggerLogicId].check(
@@ -110,7 +117,6 @@ contract Trigger {
         (bool ok, bytes memory returndata) = triggerInfo.triggerTarget.call(
             triggerInfo.triggerCalldata
         );
-
         if (!ok) {
             if (returndata.length > 0) {
                 assembly {
