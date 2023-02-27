@@ -3,4 +3,15 @@
 pragma solidity >= 0.8.0;
 
 contract TestHelper {
+    function extractAddressFromTokenId(uint256 _tokenId) external view returns (address) {
+        return address(uint160(_tokenId));
+    }
+
+    function convertAddressToId(address _tokenAddress) external view returns (uint256) {
+        return uint256(uint160(_tokenAddress));
+    }
+
+    function combineToId(uint24 _tokenType, uint _sequentialN, address _address) external view returns (uint256) {
+        return (uint256(_tokenType) << 232) +  (_sequentialN << 160) + uint256(uint160(_address));
+    }
 }
