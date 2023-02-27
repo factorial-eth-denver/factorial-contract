@@ -9,7 +9,7 @@ import "../../interfaces/external/IMasterChef.sol";
 import "../../interfaces/IConnection.sol";
 import "../../interfaces/IConnectionPool.sol";
 
-import "../library/ConnectionBitmap.sol";
+import "./library/ConnectionBitmap.sol";
 import "../../interfaces/ITokenization.sol";
 import "../../interfaces/IAsset.sol";
 

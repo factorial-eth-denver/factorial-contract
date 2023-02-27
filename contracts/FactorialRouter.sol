@@ -9,8 +9,9 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 
 import "../interfaces/ITrigger.sol";
 import "../interfaces/IWrapper.sol";
-import "./Tokenization.sol";
 import "../interfaces/IAsset.sol";
+
+import "./valuation_module/Tokenization.sol";
 
 /// It route to application.
 contract FactorialRouter {

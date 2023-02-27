@@ -2,7 +2,7 @@
 pragma solidity >=0.5.0;
 
 /// @title BitMath
-/// @dev This _library provides functionality for computing bit properties of an unsigned integer
+/// @dev This library provides functionality for computing bit properties of an unsigned integer
 library BitMath {
     /// @notice Returns the index of the most significant bit of the number,
     ///     where the least significant bit is at index 0 and the most significant bit is at index 255

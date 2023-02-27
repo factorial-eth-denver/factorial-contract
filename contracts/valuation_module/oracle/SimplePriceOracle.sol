@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-import "../../interfaces/IPriceOracle.sol";
+import "../../../interfaces/IPriceOracle.sol";
 
 contract SimplePriceOracle is IPriceOracle, OwnableUpgradeable, UUPSUpgradeable {
     mapping(address => uint) public prices; // Mapping from token to price. Price precision 1e18.

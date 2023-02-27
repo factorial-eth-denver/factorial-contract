@@ -7,10 +7,10 @@ import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "../interfaces/ITokenization.sol";
-import "../interfaces/ITrigger.sol";
-import "../interfaces/IWrapper.sol";
-import "../interfaces/IAsset.sol";
+import "../../interfaces/ITokenization.sol";
+import "../../interfaces/ITrigger.sol";
+import "../../interfaces/IWrapper.sol";
+import "../../interfaces/IAsset.sol";
 
 contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;

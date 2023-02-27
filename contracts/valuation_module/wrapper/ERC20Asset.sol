@@ -5,9 +5,9 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "../../interfaces/IWrapper.sol";
-import "../../interfaces/ITokenization.sol";
-import "../../interfaces/IPriceOracle.sol";
+import "../../../interfaces/IWrapper.sol";
+import "../../../interfaces/ITokenization.sol";
+import "../../../interfaces/IPriceOracle.sol";
 
 contract ERC20Asset is IWrapper, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;

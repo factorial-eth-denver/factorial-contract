@@ -6,12 +6,12 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
-import "../../interfaces/ITokenization.sol";
-import "../../interfaces/IWrapper.sol";
-import "../../interfaces/IPriceOracle.sol";
+import "../../../interfaces/ITokenization.sol";
+import "../../../interfaces/IWrapper.sol";
+import "../../../interfaces/IPriceOracle.sol";
 
-import "../../interfaces/external/IUniswapV2Pair.sol";
-import "../../interfaces/external/IMasterChef.sol";
+import "../../../interfaces/external/IUniswapV2Pair.sol";
+import "../../../interfaces/external/IMasterChef.sol";
 
 contract SushiswapV2NFT is OwnableUpgradeable, IWrapper {
     using SafeERC20Upgradeable for IERC20Upgradeable;

@@ -7,9 +7,9 @@ import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "../interfaces/ITokenization.sol";
-import "../interfaces/ITrigger.sol";
-import "../interfaces/IWrapper.sol";
+import "../../interfaces/ITokenization.sol";
+import "../../interfaces/ITrigger.sol";
+import "../../interfaces/IWrapper.sol";
 
 contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -75,62 +75,81 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
      * @dev See {IERC1155-safeTransferFrom}.
      */
     function safeTransferFrom(
-        address from,
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes memory data
+        address _from,
+        address _to,
+        uint256 _id,
+        uint256 _amount,
+        bytes memory _data
     ) public override {
         require(
             factorialModules[_msgSender()] ||
-            from == _msgSender() || from == cache.caller,
-            "ERC1155: caller is not token owner or caller"
+            _from == _msgSender() || _from == cache.caller,
+            "ERC1155: caller is not token owner or caller or factorial"
         );
-        if (from == cache.caller) {
-            cache.inputValue += tokenization.getValue(id, amount);
-        } else if (to == cache.caller) {
-            cache.outputValue += tokenization.getValue(id, amount);
+        if (_from == cache.caller) {
+            cache.inputValue += tokenization.getValue(_id, _amount);
+        } else if (_to == cache.caller) {
+            cache.outputValue += tokenization.getValue(_id, _amount);
         }
-        if (id >> 160 == 0) {
-            if (from == cache.caller || factorialModules[from]) {
-                if (to == cache.caller || factorialModules[to]) {
-                    IERC20Upgradeable(address(uint160(id))).safeTransferFrom(from, to, amount);
+        if (_id >> 160 == 0) {
+            address erc20Token = address(uint160(_id));
+            if (_from == cache.caller || factorialModules[_from]) {
+                if (_to == cache.caller || factorialModules[_to]) {
+                    IERC20Upgradeable(erc20Token).safeTransferFrom(_from, _to, _amount);
                 } else {
-                    IERC20Upgradeable(token).safeTransferFrom(from, address(this), amount);
-                    _mint(to, id, _amount, "");
+                    IERC20Upgradeable(erc20Token).safeTransferFrom(_from, address(this), _amount);
+                    _mint(_to, _id, _amount, "");
                 }
                 return;
-            } else if (to == cache.caller || factorialModules[to]) {
-                _burn(from, id, amount);
-                IERC20Upgradeable(token).safeTransferFrom(address(this), to, amount);
+            } else if (_to == cache.caller || factorialModules[_to]) {
+                _burn(_from, _id, _amount);
+                IERC20Upgradeable(erc20Token).safeTransferFrom(address(this), _to, _amount);
                 return;
             }
         }
-        _safeTransferFrom(from, to, id, amount, data);
+        _safeTransferFrom(_from, _to, _id, _amount, _data);
     }
 
     /**
      * @dev See {IERC1155-safeBatchTransferFrom}.
      */
     function safeBatchTransferFrom(
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
+        address _from,
+        address _to,
+        uint256[] memory _ids,
+        uint256[] memory _amounts,
+        bytes memory _data
     ) public override {
         require(
             factorialModules[_msgSender()] ||
-            from == _msgSender() || from == cache.caller,
-            "ERC1155: caller is not token owner or caller"
+            _from == _msgSender() || _from == cache.caller,
+            "ERC1155: caller is not token owner or caller or factorial"
         );
-        for (uint i = 0; i < ids.length; i++) {
-            if (from == cache.caller) {
-                cache.inputValue += tokenization.getValue(ids[i], amounts[i]);
-            } else if (to == cache.caller) {
-                cache.outputValue += tokenization.getValue(ids[i], amounts[i]);
+        for (uint i = 0; i < _ids.length; i++) {
+            uint id = _ids[i];
+            uint amount = _amounts[i];
+            if (_from == cache.caller) {
+                cache.inputValue += tokenization.getValue(id, amount);
+            } else if (_to == cache.caller) {
+                cache.outputValue += tokenization.getValue(id, amount);
+            }
+            if (id >> 160 == 0) {
+                address erc20Token = address(uint160(id));
+                if (_from == cache.caller || factorialModules[_from]) {
+                    if (_to == cache.caller || factorialModules[_to]) {
+                        IERC20Upgradeable(erc20Token).safeTransferFrom(_from, _to, amount);
+                    } else {
+                        IERC20Upgradeable(erc20Token).safeTransferFrom(_from, address(this), amount);
+                        _mint(_to, id, amount, "");
+                    }
+                    _amounts[i] = 0;
+                } else if (_to == cache.caller || factorialModules[_to]) {
+                    _burn(_from, id, amount);
+                    IERC20Upgradeable(erc20Token).safeTransferFrom(address(this), _to, amount);
+                    _amounts[i] = 0;
+                }
             }
         }
-        _safeBatchTransferFrom(from, to, ids, amounts, data);
+        _safeBatchTransferFrom(_from, _to, _ids, _amounts, _data);
     }
 }

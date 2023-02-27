@@ -3,9 +3,12 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
+
 import "../../interfaces/IConnectionPool.sol";
+
+import "./library/ConnectionBitmap.sol";
 import "./Connection.sol";
-import "../library/ConnectionBitmap.sol";
+
 
 contract ConnectionPool is IConnectionPool, OwnableUpgradeable {
     using ClonesUpgradeable for address;

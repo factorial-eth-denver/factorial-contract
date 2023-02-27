@@ -17,4 +17,6 @@ interface IMasterChef {
     function deposit(uint pid, uint amount) external;
 
     function withdraw(uint pid, uint amount) external;
+
+    function userInfo(uint pid, address user) external view returns (uint amount, uint rewardDebt);
 }
