@@ -17,7 +17,7 @@ contract Connection is IConnection{
     /// @param _target The target external DEFI contract address.
     /// @param _data The data used in the call.
     function execute(address _target, bytes calldata _data) external checkAuth returns (bytes memory){
-        (bool ok, bytes memory returndata) = _target.call(_data);
+        (bool ok, bytes memory returndata) = _target.delegatecall(_data);
         if (!ok) {
             if (returndata.length > 0) {
                 assembly {

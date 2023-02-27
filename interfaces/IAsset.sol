@@ -25,4 +25,8 @@ interface IAsset {
         uint256[] memory amounts,
         bytes memory data
     ) external;
+
+    function balanceOf(address account, uint256 id) public view returns (uint256);
+
+    function balanceOfBatch(address[] memory accounts, uint256[] memory ids) external view returns (uint256[] memory);
 }

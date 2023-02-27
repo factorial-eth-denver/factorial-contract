@@ -23,8 +23,4 @@ contract Connector is OwnableUpgradeable, UUPSUpgradeable {
     function initialize() external initializer {
         __Ownable_init();
     }
-
-    function connect() {
-
-    }
 }
