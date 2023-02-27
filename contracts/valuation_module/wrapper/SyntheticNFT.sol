@@ -28,7 +28,7 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable 
     ITokenization public tokenization;
     uint256 public sequentialN;
 
-    /// @dev Throws if called by not tokenization module.
+    /// @dev Throws if called by not valuation_module module.
     modifier onlyTokenization() {
         require(msg.sender == address(tokenization), 'Only tokenization');
         _;

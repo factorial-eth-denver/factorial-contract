@@ -34,7 +34,7 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper, ITri
     ITokenization public tokenization;
     uint256 private sequentialN;
 
-    /// @dev Throws if called by not tokenization module.
+    /// @dev Throws if called by not valuation_module module.
     modifier onlyTokenization() {
         require(msg.sender == address(tokenization), 'Only tokenization');
         _;
@@ -45,22 +45,23 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper, ITri
         tokenization = ITokenization(_tokenization);
     }
 
-    struct WrapParam {
-        uint256 collateralToken;
-        uint256 collateralAmount;
-        address liquidationModule;
-    }
-
     function wrap(bytes memory _param) external override onlyTokenization {
-        WrapParam memory param = abi.decode(_param, (WrapParam));
+        (uint256 collateralToken, uint256 collateralAmount, address liquidationModule)
+        = abi.decode(_param, (uint256, uint256, address));
 
-        tokenization.doTransferIn(param.collateralToken, param.collateralAmount);
+        tokenization.safeTransferFrom(
+            tokenization.caller(),
+            address(this),
+            collateralToken,
+            collateralAmount,
+            ''
+        );
 
         uint tokenId = tokenization.mintCallback(sequentialN++, 1);
         tokenInfos[tokenId] = DebtNFT(
-            param.collateralToken,
-            param.collateralAmount,
-            param.liquidationModule
+            collateralToken,
+            collateralAmount,
+            liquidationModule
         );
     }
 
@@ -68,18 +69,7 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper, ITri
         DebtNFT memory nft = tokenInfos[_tokenId];
         ITokenization(tokenization).burnCallback(_tokenId, 1);
         IMortgage(address(uint160(_tokenId))).repay(_tokenId);
-        tokenization.doTransferOut(address(0), nft.collateralToken, nft.collateralAmount);
-        delete tokenInfos[_tokenId];
-    }
-
-    function trigger(uint _tokenId, bytes calldata _param) external override onlyTokenization {
-        DebtNFT memory nft = tokenInfos[_tokenId];
-        (uint debtToken, uint debtAmount) = IMortgage(address(uint160(_tokenId))).getDebt(_tokenId);
-        uint256 collateralValue = getValue(nft.collateralToken, nft.collateralAmount);
-        uint256 debtValue = getValue(debtToken, debtAmount);
-        require(collateralValue <= debtValue, 'Not exceed threshold');
-        tokenization.doTransferOut(nft.liquidationModule, nft.collateralToken, nft.collateralAmount);
-        ILiquidation(nft.liquidationModule).liquidate(_tokenId, _param);
+        tokenization.safeTransferFrom(address(this), msg.sender, nft.collateralToken, _amount, '');
         delete tokenInfos[_tokenId];
     }
 

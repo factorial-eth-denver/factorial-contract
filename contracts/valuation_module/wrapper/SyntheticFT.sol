@@ -73,7 +73,7 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable {
             amounts[i] = ft.underlyingAmounts[i] * _amount / ft.totalSupply;
             ft.underlyingAmounts[i] -= amounts[i];
         }
-        tokenization.doTransferOutBatch(address(0), ft.underlyingTokens, amounts);
+        asset.safeTransferFrom(tokenization.caller(), ft.underlyingTokens, amounts);
         ITokenization(tokenization).burnCallback(_tokenId, _amount);
         ft.totalSupply -= _amount;
 

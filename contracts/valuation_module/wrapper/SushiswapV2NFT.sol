@@ -19,8 +19,6 @@ contract SushiswapV2NFT is OwnableUpgradeable, IWrapper {
 
     struct SushiFarmingNFT {
         uint poolId;
-        uint sushiPerShare;
-        uint lpAmount;
     }
 
     mapping(uint256 => SushiFarmingNFT) private tokenInfos;
@@ -42,48 +40,12 @@ contract SushiswapV2NFT is OwnableUpgradeable, IWrapper {
         sushi = IERC20Upgradeable(_sushi);
     }
 
-    struct SushiWrapParam {
-        uint256 poolId;
-        uint256 lpAmount;
+    function wrap(bytes calldata param) external override {
+        revert('Not supported');
     }
 
-    function wrap(bytes calldata param) external override onlyTokenization {
-        SushiWrapParam memory param = abi.decode(param, (SushiWrapParam));
-
-        (address lpToken, , ,) = farm.poolInfo(param.poolId);
-        ITokenization(tokenization).doTransferIn(uint256(uint160(lpToken)), param.lpAmount);
-        farm.deposit(param.poolId, param.lpAmount);
-        (, , , uint sushiPerShare) = farm.poolInfo(param.poolId);
-
-
-        // store states
-        uint tokenId = tokenization.mintCallback(sequentialN++, param.lpAmount);
-        tokenInfos[tokenId] = SushiFarmingNFT(
-            param.poolId,
-            sushiPerShare,
-            param.lpAmount
-        );
-    }
-
-    struct UnwrapParam {
-        uint256 amount;
-    }
-
-    function unwrap(uint _tokenId, uint256 _amount) external override onlyTokenization {
-        SushiFarmingNFT memory token = tokenInfos[_tokenId];
-        require(token.lpAmount >= _amount, 'Overflow');
-        ITokenization(tokenization).burnCallback(_tokenId, _amount);
-
-        farm.withdraw(token.poolId, _amount);
-        (address lpToken, , , uint enSushiPerShare) = farm.poolInfo(token.poolId);
-        IERC20Upgradeable(lpToken).safeTransfer(msg.sender, _amount);
-        // todo check divisiong logic ceiling
-        uint stSushi = token.sushiPerShare * _amount / 1e12;
-        uint enSushi = enSushiPerShare * _amount / 1e12;
-        if (enSushi > stSushi) {
-            sushi.safeTransfer(msg.sender, enSushi - stSushi);
-        }
-        delete tokenInfos[_tokenId];
+    function unwrap(uint tokenId, uint amount) external override {
+        revert('Not supported');
     }
 
     function getValue(uint256 tokenId, uint256 amount) public view override returns (uint){
