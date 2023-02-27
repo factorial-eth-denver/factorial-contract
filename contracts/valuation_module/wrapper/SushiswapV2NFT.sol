@@ -6,20 +6,38 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
-import "../../interfaces/ITokenization.sol";
-import "../../interfaces/IWrapper.sol";
-import "../../interfaces/IPriceOracle.sol";
-import "../../interfaces/external/IUniswapV2Pair.sol";
+import "../../../interfaces/ITokenization.sol";
+import "../../../interfaces/IWrapper.sol";
+import "../../../interfaces/IPriceOracle.sol";
 
-contract UniswapV2FT is OwnableUpgradeable, IWrapper {
+import "../../../interfaces/external/IUniswapV2Pair.sol";
+import "../../../interfaces/external/IMasterChef.sol";
+
+contract SushiswapV2NFT is OwnableUpgradeable, IWrapper {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using MathUpgradeable for uint256;
 
-    ITokenization public tokenization;
+    struct SushiFarmingNFT {
+        uint poolId;
+    }
 
-    function initialize(address _tokenization) public initializer {
+    mapping(uint256 => SushiFarmingNFT) private tokenInfos;
+    ITokenization public tokenization;
+    IMasterChef public farm;
+    IERC20Upgradeable public sushi;
+    uint256 private sequentialN;
+
+    /// @dev Throws if called by not router.
+    modifier onlyTokenization() {
+        require(msg.sender == address(tokenization), 'Only tokenization');
+        _;
+    }
+
+    function initialize(address _tokenization, address _farm, address _sushi) public initializer {
         __Ownable_init();
         tokenization = ITokenization(_tokenization);
+        farm = IMasterChef(_farm);
+        sushi = IERC20Upgradeable(_sushi);
     }
 
     function wrap(bytes calldata param) external override {
@@ -31,7 +49,8 @@ contract UniswapV2FT is OwnableUpgradeable, IWrapper {
     }
 
     function getValue(uint256 tokenId, uint256 amount) public view override returns (uint){
-        address lpToken = address(uint160(tokenId));
+        SushiFarmingNFT memory token = tokenInfos[tokenId];
+        (address lpToken, , ,) = farm.poolInfo(token.poolId);
         address token0 = IUniswapV2Pair(lpToken).token0();
         address token1 = IUniswapV2Pair(lpToken).token1();
         uint totalSupply = IUniswapV2Pair(lpToken).totalSupply();

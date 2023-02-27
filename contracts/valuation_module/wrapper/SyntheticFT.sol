@@ -8,12 +8,11 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
-import "../../interfaces/ITokenization.sol";
-import "../../interfaces/IWrapper.sol";
-import "../../interfaces/IMortgage.sol";
-import "../../interfaces/ITrigger.sol";
-
-import "hardhat/console.sol";
+import "../../../interfaces/ITokenization.sol";
+import "../../../interfaces/IWrapper.sol";
+import "../../../interfaces/IMortgage.sol";
+import "../../../interfaces/ITrigger.sol";
+import "../../../interfaces/IAsset.sol";
 
 contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -27,6 +26,7 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable {
 
     mapping(uint256 => SyntheticFT) public tokenInfos;
     ITokenization public tokenization;
+    IAsset public asset;
     uint256 public sequentialN;
 
     /// @dev Throws if called by not router.
@@ -35,18 +35,18 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable {
         _;
     }
 
-    function initialize(address _tokenization) public initializer {
+    function initialize(address _tokenization, address _asset) public initializer {
         __Ownable_init();
         tokenization = ITokenization(_tokenization);
+        asset = IAsset(_asset);
         sequentialN = 1;
     }
-
 
     function wrap(bytes calldata _param) external override onlyTokenization {
         (uint256[] memory tokens, uint256[] memory amounts, uint256 sequentialN, uint256 mintAmount)
         = abi.decode(_param, (uint256[], uint256[], uint256, uint256));
 
-        tokenization.doTransferInBatch(tokens, amounts);
+        asset.safeBatchTransferFrom(tokenization.caller(),address(this),  tokens, amounts, '');
         uint tokenId;
         if (sequentialN == 0) {
             tokenId = tokenization.mintCallback(sequentialN++, mintAmount);
@@ -67,10 +67,6 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable {
         }
     }
 
-    struct UnwrapParam {
-        uint256 burnAmount;
-    }
-
     function unwrap(uint _tokenId, uint _amount) external override onlyTokenization {
         SyntheticFT memory ft = tokenInfos[_tokenId];
         uint256[] memory amounts = new uint256[](ft.underlyingAmounts.length);
@@ -78,7 +74,7 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable {
             amounts[i] = ft.underlyingAmounts[i] * _amount / ft.totalSupply;
             ft.underlyingAmounts[i] -= amounts[i];
         }
-        tokenization.doTransferOutBatch(address(0), ft.underlyingTokens, amounts);
+        asset.safeBatchTransferFrom(address(this), tokenization.caller(), ft.underlyingTokens, amounts, '');
         ITokenization(tokenization).burnCallback(_tokenId, _amount);
         ft.totalSupply -= _amount;
 

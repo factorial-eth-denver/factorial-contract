@@ -5,7 +5,7 @@ pragma solidity ^0.8.12;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-import "../../interfaces/IPriceOracle.sol";
+import "../../../interfaces/IPriceOracle.sol";
 
 contract OracleRouter is IPriceOracle, OwnableUpgradeable, UUPSUpgradeable {
     mapping(address => address) public oracles; // Mapping from token to oracle source
