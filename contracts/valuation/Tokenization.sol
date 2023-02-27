@@ -32,6 +32,15 @@ contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable {
         _;
     }
 
+    /// @dev Throws if called by not router.
+    modifier writeCache(uint24 _wrapperType) {
+        cache.wrapCaller = msg.sender;
+        cache.tokenType = _wrapperType;
+        _;
+        cache.wrapCaller = address(0);
+        cache.tokenType = 0;
+    }
+
     /// @dev required by the OZ UUPS module
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
@@ -50,12 +59,12 @@ contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     /// External Functions
-    function wrap(uint24 _wrapperType, bytes calldata _param) external override {
+    function wrap(uint24 _wrapperType, bytes calldata _param) external override writeCache(_wrapperType) {
         IWrapper(tokenTypeSpecs[_wrapperType]).wrap(_param);
     }
 
-    function unwrap(uint _tokenId, uint _amount) external override {
-        uint24 tokenType = uint24(_tokenId >> 232);
+    function unwrap(uint _tokenId, uint _amount) external override writeCache(uint24(_tokenId >> 232)) {
+        uint24 tokenType = cache.tokenType;
         IWrapper(tokenTypeSpecs[tokenType]).unwrap(_tokenId, _amount);
     }
 

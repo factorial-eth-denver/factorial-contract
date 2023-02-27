@@ -29,24 +29,34 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
     VariableCache public cache;
     ITokenization public tokenization;
 
-    /// ----- VARIABLE STATES -----
+    /// ----- SETTING STATES -----
     mapping(address => bool) public factorialModules;
+    address public router;
 
-    /// @dev Throws if called by not router.
+    /// @dev Throws if called by not factorial module.
     modifier onlyFactorialModule() {
         require(factorialModules[msg.sender], 'Only factorial module');
+        _;
+    }
+
+    /// @dev Throws if called by not router.
+    modifier onlyRouter() {
+        require(msg.sender == router, 'Only router');
         _;
     }
 
     /// @dev required by the OZ UUPS module
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
-    function initialize() external initializer {
+    function initialize(address _router) external initializer {
         __Ownable_init();
+        router = _router;
     }
 
-    function registerFactorialModule(address _factorialModule) external onlyOwner {
-        factorialModules[_factorialModule] = true;
+    function registerFactorialModules(address[] calldata _factorialModules) external onlyOwner {
+        for (uint i = 0; i < _factorialModules.length; i++) {
+            factorialModules[_factorialModules[i]] = true;
+        }
     }
 
     function setTokenization(address _tokenization) external onlyOwner {
@@ -61,13 +71,13 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
         _burn(_from, _tokenId, _amount);
     }
 
-    function beforeExecute(uint _maximumLoss) external onlyFactorialModule {
-        require(cache.caller != address(0), 'Locked');
-        cache.caller = msg.sender;
+    function beforeExecute(uint _maximumLoss, address _caller) external onlyRouter {
+        require(cache.caller == address(0), 'Locked');
+        cache.caller = _caller;
         cache.maximumLoss = _maximumLoss;
     }
 
-    function afterExecute() external onlyFactorialModule {
+    function afterExecute() external onlyRouter {
         require(cache.outputValue + cache.maximumLoss > cache.inputValue, 'Over slippage');
         cache.caller = address(0);
         cache.maximumLoss = 0;
@@ -95,7 +105,7 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
         } else if (_to == cache.caller) {
             cache.outputValue += tokenization.getValue(_id, _amount);
         }
-        if (_id >> 160 == 0) {
+        if ((_id >> 160) == 0) {
             address erc20Token = address(uint160(_id));
             if (_from == cache.caller || factorialModules[_from]) {
                 if (_to == cache.caller || factorialModules[_to]) {
@@ -137,19 +147,19 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
             } else if (_to == cache.caller) {
                 cache.outputValue += tokenization.getValue(id, amount);
             }
-            if (id >> 160 == 0) {
-                address erc20Token = address(uint160(id));
+            if ((id >> 160) == 0) {
+                address externalToken = id.toAddress();
                 if (_from == cache.caller || factorialModules[_from]) {
                     if (_to == cache.caller || factorialModules[_to]) {
-                        IERC20Upgradeable(erc20Token).safeTransferFrom(_from, _to, amount);
+                        IERC20Upgradeable(externalToken).safeTransferFrom(_from, _to, amount);
                     } else {
-                        IERC20Upgradeable(erc20Token).safeTransferFrom(_from, address(this), amount);
+                        IERC20Upgradeable(externalToken).safeTransferFrom(_from, address(this), amount);
                         _mint(_to, id, amount, "");
                     }
                     _amounts[i] = 0;
                 } else if (_to == cache.caller || factorialModules[_to]) {
                     _burn(_from, id, amount);
-                    IERC20Upgradeable(erc20Token).safeTransferFrom(address(this), _to, amount);
+                    IERC20Upgradeable(externalToken).safeTransferFrom(address(this), _to, amount);
                     _amounts[i] = 0;
                 }
             }

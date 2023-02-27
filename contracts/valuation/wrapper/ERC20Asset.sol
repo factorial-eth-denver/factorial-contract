@@ -13,18 +13,10 @@ contract ERC20Asset is IWrapper, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     IPriceOracle public oracle;
-    ITokenization public tokenization;
 
-    /// @dev Throws if called by not router.
-    modifier onlyTokenization() {
-        require(msg.sender == address(tokenization), 'Only tokenization');
-        _;
-    }
-
-    function initialize(address _oracleRouter, address _tokenization) public initializer {
+    function initialize(address _oracleRouter) public initializer {
         __Ownable_init();
         oracle = IPriceOracle(_oracleRouter);
-        tokenization = ITokenization(_tokenization);
     }
 
     function wrap(bytes memory) external pure override {
