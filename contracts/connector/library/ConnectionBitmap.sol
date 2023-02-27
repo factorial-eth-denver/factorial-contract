@@ -29,7 +29,7 @@ library ConnectionBitmap {
         _self[bitMapIdx] -= diff;
     }
 
-    function isEmpty(mapping(uint24 => uint) storage _self, uint24 _connectionId) internal returns (bool) {
+    function isEmpty(mapping(uint24 => uint) storage _self, uint24 _connectionId) internal view returns (bool) {
         (uint16 bitMapIdx, uint8 bitIdx) = toIdx(_connectionId);
         uint256 mask = 1 << bitIdx;
         return (_self[bitMapIdx] & mask != 0);
@@ -40,8 +40,6 @@ library ConnectionBitmap {
         uint maxBitmapId
     ) internal view returns (uint24 nextContractId){
         uint16 bitMapIdx = 0;
-        uint8 bitIdx = 0;
-        uint curBitmap;
         uint curBitmap;
         while (true) {
             curBitmap = self[bitMapIdx];

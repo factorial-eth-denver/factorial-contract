@@ -40,11 +40,11 @@ contract SushiswapV2NFT is OwnableUpgradeable, IWrapper {
         sushi = IERC20Upgradeable(_sushi);
     }
 
-    function wrap(bytes calldata param) external override {
+    function wrap(bytes calldata) external pure override {
         revert('Not supported');
     }
 
-    function unwrap(uint tokenId, uint amount) external override {
+    function unwrap(uint, uint) external pure override {
         revert('Not supported');
     }
 

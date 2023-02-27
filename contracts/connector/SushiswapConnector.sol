@@ -32,6 +32,9 @@ contract SushiswapConnector is OwnableUpgradeable, UUPSUpgradeable {
 
     uint public wrapperTokenType;
 
+    /// @dev required by the OZ UUPS module
+    function _authorizeUpgrade(address) internal override onlyOwner {}
+
     function initialize(
         address _tokenization,
         address _asset,
@@ -43,7 +46,7 @@ contract SushiswapConnector is OwnableUpgradeable, UUPSUpgradeable {
         tokenization = ITokenization(_tokenization);
         asset = IAsset(_asset);
         connectionPool = IConnectionPool(_connectionPool);
-        masterChef = IMasterChef(masterChef);
+        masterChef = IMasterChef(_masterChef);
         sushi = IERC20Upgradeable(_sushi);
         wrapperTokenType = _wrapperTokenType;
     }
@@ -134,13 +137,13 @@ contract SushiswapConnector is OwnableUpgradeable, UUPSUpgradeable {
         if (amount == 0) connectionBitMap.release(connectionId);
     }
 
-    function withdraw(uint _pid, uint _amount, address masterChef, address sushi, address caller) external {
-        (address lp, , ,) = IMasterChef(masterChef).poolInfo(_pid);
-        IMasterChef(masterChef).withdraw(_pid, _amount);
+    function withdraw(uint _pid, uint _amount, address _masterChef, address _sushi, address _caller) external {
+        (address lp, , ,) = IMasterChef(_masterChef).poolInfo(_pid);
+        IMasterChef(_masterChef).withdraw(_pid, _amount);
         IAsset(asset).safeTransferFrom(
-            address(this), caller, uint256(uint160(sushi)), IERC20Upgradeable(sushi).balanceOf(address(this)), ''
+            address(this), _caller, _sushi, IERC20Upgradeable(_sushi).balanceOf(address(this))
         );
-        IAsset(asset).safeTransferFrom(address(this), caller, uint256(uint160(lp)), _amount, '');
+        IAsset(asset).safeTransferFrom(address(this), _caller, lp, _amount);
     }
 
     function occupyConnection() internal returns (uint){

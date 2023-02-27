@@ -15,7 +15,7 @@ contract MockOldERC20 {
     string private _symbol;
     uint8 private _decimals;
 
-    constructor (string memory name_, string memory symbol_, uint8 decimals_) public {
+    constructor (string memory name_, string memory symbol_, uint8 decimals_) {
         _name = name_;
         _symbol = symbol_;
         _decimals = decimals_;

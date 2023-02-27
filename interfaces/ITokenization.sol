@@ -6,8 +6,6 @@ interface ITokenization {
 
     function unwrap(uint _tokenId, uint _amount) external;
 
-    function trigger(uint _tokenId, bytes calldata _param) external;
-
     function getValue(uint tokenId, uint amount) external view returns (uint);
 
     function caller() external view returns (address);
