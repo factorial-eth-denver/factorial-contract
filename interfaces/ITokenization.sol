@@ -12,15 +12,6 @@ interface ITokenization {
 
     function caller() external view returns (address);
 
-    /// Callback Functions
-    function doTransferIn(uint256 _tokenId, uint256 _amount) external;
-
-    function doTransferInBatch(uint256[] calldata _tokenIds, uint256[] calldata _amounts) external;
-
-    function doTransferOut(address recipient, uint256 _tokenId, uint256 _amount) external;
-
-    function doTransferOutBatch(address recipient, uint256[] calldata _tokenIds, uint256[] calldata _amounts) external;
-
     function mintCallback(uint256 _sequentialN, uint256 _amount) external returns (uint);
 
     function burnCallback(uint256 _tokenId, uint256 _amount) external;
