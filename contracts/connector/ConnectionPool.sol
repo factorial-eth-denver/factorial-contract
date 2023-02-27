@@ -22,8 +22,8 @@ contract ConnectionPool is IConnectionPool, OwnableUpgradeable {
     mapping(uint => address) public connections;
     address public connectionImpl;
 
-    /// @dev Register connector_module.
-    /// @param _connector External defi connector_module address
+    /// @dev Register connector.
+    /// @param _connector External defi connector address
     function registerConnector(address _connector) external onlyOwner {
         lastConnectorId ++;
         connectors[_connector] = lastConnectorId;
