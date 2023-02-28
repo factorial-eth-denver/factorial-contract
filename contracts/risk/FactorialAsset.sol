@@ -35,7 +35,7 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
 
     /// @dev Throws if called by not factorial module.
     modifier onlyFactorialModule() {
-        require(factorialModules[msg.sender], 'Only factorial module');
+        require(factorialModules[_msgSender()], 'Only factorial module');
         _;
     }
 
@@ -48,9 +48,10 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
     /// @dev required by the OZ UUPS module
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
-    function initialize(address _router) external initializer {
+    function initialize(address _router, address _tokenization) external initializer {
         __Ownable_init();
         router = _router;
+        tokenization = ITokenization(_tokenization);
     }
 
     function registerFactorialModules(address[] calldata _factorialModules) external onlyOwner {
@@ -59,19 +60,21 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
         }
     }
 
-    function setTokenization(address _tokenization) external onlyOwner {
-        tokenization = ITokenization(_tokenization);
-    }
-
     function caller() external view returns (address) {
         return cache.caller;
     }
 
     function mint(address _to, uint _tokenId, uint _amount) public onlyFactorialModule {
+        if (_to == cache.caller) {
+            cache.outputValue += tokenization.getValue(_tokenId, _amount);
+        }
         _mint(_to, _tokenId, _amount, "");
     }
 
     function burn(address _from, uint _tokenId, uint _amount) public onlyFactorialModule {
+        if (_from == cache.caller) {
+            cache.inputValue += tokenization.getValue(_tokenId, _amount);
+        }
         _burn(_from, _tokenId, _amount);
     }
 
@@ -82,6 +85,9 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
     }
 
     function afterExecute() external onlyRouter {
+        console.log(cache.outputValue);
+        console.log(cache.inputValue);
+        console.log(cache.maximumLoss);
         require(cache.outputValue + cache.maximumLoss > cache.inputValue, 'Over slippage');
         cache.caller = address(0);
         cache.maximumLoss = 0;
@@ -189,5 +195,12 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
             }
         }
         return balanceOf(account, id);
+    }
+
+    function _msgSender() internal view override returns (address) {
+        if (msg.sender == router) {
+            return cache.caller;
+        }
+        return msg.sender;
     }
 }
