@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
 import "./Lending.sol";
 import "../interfaces/IBorrowable.sol";
 
-contract LeverageYieldFarming is IBorrowable, ERC1155 {
+contract LeverageYieldFarming is IBorrowable, ERC1155, Ownable {
     // UniConnector public uni;
     Lending public lending;
 
@@ -41,8 +44,8 @@ contract LeverageYieldFarming is IBorrowable, ERC1155 {
     ) public {
         require(borrowCache.init == false, "already borrowed");
         borrowCache = BorrowCache(true, token0, token1, amount0, amount1);
-        lending.borrowAndCallback(token1, amount1);
 
+        lending.borrowAndCallback(token1, amount1);
         // fpm.mint([address(uni)], [id], [1], [token0, token1], [debt0, debt1]);
     }
 
@@ -71,13 +74,23 @@ contract LeverageYieldFarming is IBorrowable, ERC1155 {
         lending.repayAndCallback(debtId);
     }
 
-    function repayCallback(uint256 debtId) public override {
+    function repayCallback(
+        uint256 tokenId,
+        uint256 tokenAmount
+    ) public override returns (uint256 dTokenId, uint256 dTokenAmount) {
         // (uint256 token0, uint256 amount0, uint256 token1, uint256 amount1) = uni
         //     .burn(collateral, collateralAmount);
         // uni.swap();
+
+        sh
+
     }
 
     function getValue(uint256 id) public view returns (uint256) {
         return 0;
+    }
+
+    function setURI(string memory newuri) public onlyOwner {
+        _setURI(newuri);
     }
 }
