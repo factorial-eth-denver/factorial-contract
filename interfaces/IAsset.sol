@@ -6,7 +6,7 @@ interface IAsset {
 
     function burn(address _from, uint _tokenId, uint _amount) external;
 
-    function beforeExecute(uint _maximumLoss) external;
+    function beforeExecute(uint _maximumLoss, address _caller) external;
 
     function afterExecute() external;
 
@@ -34,4 +34,6 @@ interface IAsset {
     ) external;
 
     function balanceOf(address account, uint256 id) external view returns (uint256);
+    function caller() external view returns (address);
+    function router() external view returns (address);
 }

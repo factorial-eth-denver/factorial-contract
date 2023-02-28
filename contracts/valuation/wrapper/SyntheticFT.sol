@@ -46,7 +46,7 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable {
         (uint256[] memory tokens, uint256[] memory amounts, uint256 _sequentialN, uint256 mintAmount)
         = abi.decode(_param, (uint256[], uint256[], uint256, uint256));
 
-        asset.safeBatchTransferFrom(tokenization.caller(),address(this),  tokens, amounts, '');
+        asset.safeBatchTransferFrom(tokenization.caller(), address(this), tokens, amounts, '');
         uint tokenId;
         if (_sequentialN == 0) {
             tokenId = tokenization.mintCallback(sequentialN++, mintAmount);
@@ -87,7 +87,7 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable {
         for (uint i = 0; i < token.underlyingTokens.length; i ++) {
             totalValue += tokenization.getValue(token.underlyingTokens[i], token.underlyingAmounts[i]);
         }
-        if(_amount == 0) {
+        if (_amount == 0) {
             return totalValue;
         }
         return totalValue * _amount / token.totalSupply;

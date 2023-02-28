@@ -14,10 +14,11 @@ import "../interfaces/IAsset.sol";
 import "./valuation/Tokenization.sol";
 
 /// It route to application.
-contract FactorialRouter {
+contract FactorialRouter is OwnableUpgradeable {
     IAsset public asset;
 
-    constructor(address _asset) {
+    function initialize(address _asset) external initializer {
+        __Ownable_init();
         asset = IAsset(_asset);
     }
 
@@ -25,7 +26,7 @@ contract FactorialRouter {
     /// @param _maximumLoss The maximum loss slippage
     /// @param _data The data used in the call.
     function execute(uint96 _maximumLoss, address _target, bytes calldata _data) external {
-        asset.beforeExecute(_maximumLoss);
+        asset.beforeExecute(_maximumLoss, msg.sender);
         executeInternal(_target, _data);
         asset.afterExecute();
     }
@@ -35,7 +36,7 @@ contract FactorialRouter {
     /// @param _targetArray The target array used in the call.
     /// @param _dataArray The data array used in the call.
     function executeBatch(uint256 _maximumLoss, address[] calldata _targetArray, bytes[] calldata _dataArray) external {
-        asset.beforeExecute(_maximumLoss);
+        asset.beforeExecute(_maximumLoss, msg.sender);
         for (uint256 idx = 0; idx < _dataArray.length; idx ++) {
             executeInternal(_targetArray[idx], _dataArray[idx]);
         }
