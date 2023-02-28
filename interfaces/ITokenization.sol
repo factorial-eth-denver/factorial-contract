@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 interface ITokenization {
-    function wrap(uint24 _wrapperTokenType, bytes calldata param) external;
+    function wrap(uint24 _wrapperTokenType, bytes calldata param) external returns (uint);
 
     function unwrap(uint _tokenId, uint _amount) external;
 

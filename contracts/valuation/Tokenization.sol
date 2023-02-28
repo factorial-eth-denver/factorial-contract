@@ -32,8 +32,8 @@ contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable, Fac
     }
 
     /// External Functions
-    function wrap(uint24 _wrapperType, bytes calldata _param) external override {
-        IWrapper(tokenTypeSpecs[_wrapperType]).wrap(msgSender(), _wrapperType, _param);
+    function wrap(uint24 _wrapperType, bytes calldata _param) external override returns (uint){
+        return IWrapper(tokenTypeSpecs[_wrapperType]).wrap(msgSender(), _wrapperType, _param);
     }
 
     function unwrap(uint _tokenId, uint _amount) external override {
