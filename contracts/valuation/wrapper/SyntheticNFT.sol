@@ -8,15 +8,20 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
+import "../../connector/library/SafeCastUint256.sol";
+
 import "../../../interfaces/ITokenization.sol";
 import "../../../interfaces/IWrapper.sol";
 import "../../../interfaces/IMortgage.sol";
 import "../../../interfaces/ITrigger.sol";
 import "../../../interfaces/IAsset.sol";
 
+import "hardhat/console.sol";
+
 contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using MathUpgradeable for uint256;
+    using SafeCastUint256 for uint256;
 
     struct SynthNFT {
         uint256[] underlyingTokens;
@@ -45,24 +50,31 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable 
         uint256[] amounts;
     }
 
-    function wrap(bytes calldata _param) external override onlyTokenization {
+    function wrap(
+        address _caller,
+        uint24 _tokenType,
+        bytes calldata _param
+    ) external override onlyTokenization returns (uint){
         (uint256[] memory tokens, uint256[] memory amounts) = abi.decode(_param, (uint256[], uint256[]));
 
-        asset.safeBatchTransferFrom(tokenization.caller(), address(this), tokens, amounts, '');
-        uint tokenId = tokenization.mintCallback(sequentialN++, 1);
+        uint tokenId = (uint256(_tokenType) << 232) + (sequentialN++ << 160) + uint256(uint160(_caller));
 
+        // Store states
         SynthNFT storage token = tokenInfos[tokenId];
+        token.underlyingTokens = tokens;
+        token.underlyingAmounts = amounts;
 
-        for (uint i = 0; i < tokens.length; i ++) {
-            token.underlyingTokens.push(tokens[i]);
-            token.underlyingAmounts.push(amounts[i]);
-        }
+        // Mint token to user
+        asset.safeBatchTransferFrom(_caller, address(this), tokens, amounts, '');
+        asset.mint(_caller, tokenId, 1);
+
+        return tokenId;
     }
 
-    function unwrap(uint _tokenId, uint) external override onlyTokenization {
+    function unwrap(address caller, uint _tokenId, uint) external override onlyTokenization {
         SynthNFT memory nft = tokenInfos[_tokenId];
-        asset.safeBatchTransferFrom(address(this), tokenization.caller(), nft.underlyingTokens, nft.underlyingAmounts, '');
-        ITokenization(tokenization).burnCallback(_tokenId, 1);
+        asset.safeBatchTransferFrom(address(this), caller, nft.underlyingTokens, nft.underlyingAmounts, '');
+        asset.burn(caller, _tokenId, 1);
         delete tokenInfos[_tokenId];
     }
 

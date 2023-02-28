@@ -7,10 +7,4 @@ interface ITokenization {
     function unwrap(uint _tokenId, uint _amount) external;
 
     function getValue(uint tokenId, uint amount) external view returns (uint);
-
-    function caller() external view returns (address);
-
-    function mintCallback(uint256 _sequentialN, uint256 _amount) external returns (uint);
-
-    function burnCallback(uint256 _tokenId, uint256 _amount) external;
 }

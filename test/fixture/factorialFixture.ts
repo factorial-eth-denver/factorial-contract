@@ -63,7 +63,7 @@ const factorialFixture: Fixture<{
     const helper = await testHelperFactory.deploy() as TestHelper;
 
     await router.initialize(asset.address);
-    await asset.initialize(router.address);
+    await asset.initialize(router.address, tokenization.address);
     await tokenization.initialize(asset.address);
     await oracleRouter.initialize();
     await simplePriceOracle.initialize();

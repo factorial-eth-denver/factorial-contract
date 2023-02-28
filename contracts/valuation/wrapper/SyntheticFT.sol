@@ -13,10 +13,12 @@ import "../../../interfaces/IWrapper.sol";
 import "../../../interfaces/IMortgage.sol";
 import "../../../interfaces/ITrigger.sol";
 import "../../../interfaces/IAsset.sol";
+import "../../connector/library/SafeCastUint256.sol";
 
 contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using MathUpgradeable for uint256;
+    using SafeCastUint256 for uint256;
 
     struct SynthFT {
         uint256[] underlyingTokens;
@@ -42,18 +44,21 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable {
         sequentialN = 1;
     }
 
-    function wrap(bytes calldata _param) external override onlyTokenization {
+    function wrap(
+        address _caller,
+        uint24 _tokenType,
+        bytes calldata _param
+    ) external override onlyTokenization returns (uint tokenId){
         (uint256[] memory tokens, uint256[] memory amounts, uint256 _sequentialN, uint256 mintAmount)
         = abi.decode(_param, (uint256[], uint256[], uint256, uint256));
 
-        asset.safeBatchTransferFrom(tokenization.caller(), address(this), tokens, amounts, '');
-        uint tokenId;
         if (_sequentialN == 0) {
-            tokenId = tokenization.mintCallback(sequentialN++, mintAmount);
+            tokenId = (uint256(_tokenType) << 232) + (sequentialN++ << 160) + uint256(uint160(_caller));
         } else {
-            tokenId = tokenization.mintCallback(_sequentialN, mintAmount);
+            tokenId = (uint256(_tokenType) << 232) + (_sequentialN << 160) + uint256(uint160(_caller));
         }
 
+        // Store states
         SynthFT storage ft = tokenInfos[tokenId];
         ft.totalSupply += mintAmount;
         for (uint i = 0; i < tokens.length; i ++) {
@@ -65,17 +70,23 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable {
                 ft.underlyingAmounts[i] += amounts[i];
             }
         }
+
+        // Mint token to user
+        asset.safeBatchTransferFrom(_caller, address(this), tokens, amounts, '');
+        asset.mint(_caller, tokenId, mintAmount);
+
+        return tokenId;
     }
 
-    function unwrap(uint _tokenId, uint _amount) external override onlyTokenization {
+    function unwrap(address _caller, uint _tokenId, uint _amount) external override onlyTokenization {
         SynthFT memory ft = tokenInfos[_tokenId];
         uint256[] memory amounts = new uint256[](ft.underlyingAmounts.length);
         for (uint i = 0; i < amounts.length; i++) {
             amounts[i] = ft.underlyingAmounts[i] * _amount / ft.totalSupply;
             ft.underlyingAmounts[i] -= amounts[i];
         }
-        asset.safeBatchTransferFrom(address(this), tokenization.caller(), ft.underlyingTokens, amounts, '');
-        ITokenization(tokenization).burnCallback(_tokenId, _amount);
+        asset.safeBatchTransferFrom(address(this), _caller, ft.underlyingTokens, amounts, '');
+        asset.burn(_caller, _tokenId, _amount);
         ft.totalSupply -= _amount;
 
         tokenInfos[_tokenId] = ft;

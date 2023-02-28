@@ -35,6 +35,10 @@ contract SushiswapConnector is OwnableUpgradeable, UUPSUpgradeable, FactorialCon
     /// @dev required by the OZ UUPS module
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
+//
+//    function getPoolId (uint _tokenA, uint _tokenB) external view returns(uint);
+//    function getLP (uint _tokenA, uint _tokenB) external view returns(uint);
+
     function initialize(
         address _tokenization,
         address _asset,
@@ -118,7 +122,6 @@ contract SushiswapConnector is OwnableUpgradeable, UUPSUpgradeable, FactorialCon
         IAsset(asset).safeTransferFrom(
             address(this), _caller, _sushi, IERC20Upgradeable(_sushi).balanceOf(address(this))
         );
-
     }
 
     function withdraw(uint _tokenId, uint _amount) external {

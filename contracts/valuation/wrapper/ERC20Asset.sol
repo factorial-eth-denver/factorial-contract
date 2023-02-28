@@ -19,11 +19,11 @@ contract ERC20Asset is IWrapper, OwnableUpgradeable {
         oracle = IPriceOracle(_oracleRouter);
     }
 
-    function wrap(bytes memory) external pure override {
+    function wrap(address, uint24, bytes memory) external pure override returns (uint) {
         revert('Not supported');
     }
 
-    function unwrap(uint, uint) external pure override {
+    function unwrap(address, uint, uint) external pure override {
         revert('Not supported');
     }
 

@@ -14,6 +14,7 @@ import "../../../interfaces/IMortgage.sol";
 import "../../../interfaces/ITrigger.sol";
 import "../../../interfaces/ILiquidation.sol";
 import "../../../interfaces/IAsset.sol";
+import "../../connector/library/SafeCastUint256.sol";
 
 contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -31,7 +32,7 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
     }
 
     mapping(address => TokenFactors) public tokenFactors; // Mapping from token address to oracle info.
-    mapping(uint256 => DebtToken) private tokenInfos;
+    mapping(uint256 => DebtToken) public tokenInfos;
     ITokenization public tokenization;
     IAsset public asset;
     uint256 private sequentialN;
@@ -48,31 +49,35 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
         asset = IAsset(_asset);
     }
 
-    function wrap(bytes memory _param) external override onlyTokenization {
+    function wrap(
+        address _caller,
+        uint24 _tokenType,
+        bytes memory _param
+    ) external override onlyTokenization returns(uint) {
         (uint256 collateralToken, uint256 collateralAmount, address liquidationModule)
         = abi.decode(_param, (uint256, uint256, address));
 
-        asset.safeTransferFrom(
-            tokenization.caller(),
-            address(this),
-            collateralToken,
-            collateralAmount,
-            ''
-        );
 
-        uint tokenId = tokenization.mintCallback(sequentialN++, 1);
+        uint tokenId = (uint256(_tokenType) << 232) + (sequentialN++ << 160) + uint256(uint160(_caller));
+
+        // Store states
         tokenInfos[tokenId] = DebtToken(
             collateralToken,
             collateralAmount,
             liquidationModule
         );
+
+        // Mint token to user
+        asset.safeTransferFrom(_caller, address(this), collateralToken, collateralAmount, '');
+        asset.mint(_caller, tokenId, 1);
+        return tokenId;
     }
 
-    function unwrap(uint _tokenId, uint _amount) external override onlyTokenization {
+    function unwrap(address _caller, uint _tokenId, uint _amount) external override onlyTokenization {
         DebtToken memory nft = tokenInfos[_tokenId];
-        ITokenization(tokenization).burnCallback(_tokenId, 1);
+        asset.burn(_caller, _tokenId, 1);
         IMortgage(address(uint160(_tokenId))).repay(_tokenId);
-        asset.safeTransferFrom(address(this), msg.sender, nft.collateralToken, _amount, '');
+        asset.safeTransferFrom(address(this), _caller, nft.collateralToken, _amount, '');
         delete tokenInfos[_tokenId];
     }
 

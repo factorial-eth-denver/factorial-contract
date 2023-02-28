@@ -22,11 +22,11 @@ contract UniswapV2FT is OwnableUpgradeable, IWrapper {
         tokenization = ITokenization(_tokenization);
     }
 
-    function wrap(bytes calldata) external pure override {
+    function wrap(address, uint24, bytes calldata) external pure override returns (uint) {
         revert('Not supported');
     }
 
-    function unwrap(uint, uint) external pure override {
+    function unwrap(address, uint, uint) external pure override {
         revert('Not supported');
     }
 
