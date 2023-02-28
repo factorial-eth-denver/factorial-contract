@@ -9,10 +9,13 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 
 import "../connector/library/SafeCastUint256.sol";
 
+import "../../interfaces/IFactorialModule.sol";
 import "../../interfaces/ITokenization.sol";
 import "../../interfaces/ITrigger.sol";
 import "../../interfaces/IWrapper.sol";
 import "../../interfaces/IAsset.sol";
+
+import "hardhat/console.sol";
 
 contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -25,13 +28,15 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
         uint256 outputValue;
     }
 
-    /// ----- VARIABLE STATES -----
+    /// ----- SETTING STATES -----
     VariableCache public cache;
     ITokenization public tokenization;
 
-    /// ----- SETTING STATES -----
+    /// ----- VARIABLE STATES -----
     mapping(address => bool) public factorialModules;
+    mapping(uint256 => address) public ownerOf;
     address public router;
+
 
     /// @dev Throws if called by not factorial module.
     modifier onlyFactorialModule() {
@@ -116,18 +121,26 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
             cache.outputValue += tokenization.getValue(_id, _amount);
         }
         if ((_id >> 160) == 0) {
-            address erc20Token = address(uint160(_id));
-            if (_from == cache.caller || factorialModules[_from]) {
-                if (_to == cache.caller || factorialModules[_to]) {
-                    IERC20Upgradeable(erc20Token).safeTransferFrom(_from, _to, _amount);
+            address externalToken = _id.toAddress();
+            if (_from == cache.caller) {
+                if (factorialModules[_to]) {
+                    IERC20Upgradeable(externalToken).safeTransferFrom(_from, _to, _amount);
                 } else {
-                    IERC20Upgradeable(erc20Token).safeTransferFrom(_from, address(this), _amount);
+                    IERC20Upgradeable(externalToken).safeTransferFrom(_from, address(this), _amount);
+                    _mint(_to, _id, _amount, "");
+                }
+                return;
+            } else if (factorialModules[_from]) {
+                if (_to == cache.caller || factorialModules[_to]) {
+                    IFactorialModule(_from).doTransfer(externalToken, _to, _amount);
+                } else {
+                    IFactorialModule(_from).doTransfer(externalToken, address(this), _amount);
                     _mint(_to, _id, _amount, "");
                 }
                 return;
             } else if (_to == cache.caller || factorialModules[_to]) {
                 _burn(_from, _id, _amount);
-                IERC20Upgradeable(erc20Token).safeTransferFrom(address(this), _to, _amount);
+                IERC20Upgradeable(externalToken).safeTransferFrom(address(this), _to, _amount);
                 return;
             }
         }
@@ -159,11 +172,19 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
             }
             if ((id >> 160) == 0) {
                 address externalToken = id.toAddress();
-                if (_from == cache.caller || factorialModules[_from]) {
-                    if (_to == cache.caller || factorialModules[_to]) {
+                if (_from == cache.caller) {
+                    if (factorialModules[_to]) {
                         IERC20Upgradeable(externalToken).safeTransferFrom(_from, _to, amount);
                     } else {
                         IERC20Upgradeable(externalToken).safeTransferFrom(_from, address(this), amount);
+                        _mint(_to, id, amount, "");
+                    }
+                    _amounts[i] = 0;
+                } else if (factorialModules[_from]) {
+                    if (_to == cache.caller || factorialModules[_to]) {
+                        IFactorialModule(_from).doTransfer(externalToken, _to, amount);
+                    } else {
+                        IFactorialModule(_from).doTransfer(externalToken, address(this), amount);
                         _mint(_to, id, amount, "");
                     }
                     _amounts[i] = 0;
@@ -195,6 +216,21 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
             }
         }
         return balanceOf(account, id);
+    }
+
+    function _afterTokenTransfer(
+        address,
+        address,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory,
+        bytes memory
+    ) internal override {
+        for (uint i; i < ids.length; i++) {
+            if (ids[i] >> 255 == 1) {
+                ownerOf[ids[i]] = to;
+            }
+        }
     }
 
     function _msgSender() internal view override returns (address) {
