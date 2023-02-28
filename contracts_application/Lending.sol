@@ -1,22 +1,30 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-// Uncomment this line to use console.log
-// import "hardhat/console.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "./interfaces/ILending.sol";
-import "../Tokenization.sol";
-import "../wrapper/DebtNFT.sol";
+import "../interfaces/IBorrowable.sol";
+import "../interfaces/ILending.sol";
+import "../interfaces/IAsset.sol";
+
+import "../contracts/valuation/Tokenization.sol";
+import "../contracts/valuation/wrapper/DebtNFT.sol";
+import "../contracts/trigger/Trigger.sol";
+import "../contracts/trigger/logics/TriggerStopLoss.sol";
 
 contract Lending is ILending, ERC1155, ERC1155Supply, Ownable {
+    struct Bank {
+        uint256 totalDeposit;
+        bool isWhitelisted;
+    }
+
     Tokenization public tokenization;
     Trigger public trigger;
     DebtNFT public debtNFT;
+    IAsset public asset;
     address public liquidation;
 
     uint256 public borrowFactor;
@@ -25,51 +33,57 @@ contract Lending is ILending, ERC1155, ERC1155Supply, Ownable {
     mapping(address => Bank) public banks;
     mapping(uint256 => BorrowInfo) public borrows;
 
-    struct Bank {
-        uint256 totalDeposit;
-        bool isWhitelisted;
-    }
-
-    struct BorrowInfo {
-        address debtAsset;
-        uint256 debtAmount;
-        uint256 startTime;
-    }
-
     constructor() ERC1155("Lending") {}
 
     function getBorrowInfo(
-        _id
+        uint256 _id
     ) external view override returns (BorrowInfo memory) {
         return borrows[_id];
     }
 
     function deposit(address _asset, uint256 _amount) external {
         require(banks[_asset].isWhitelisted, "Lending: asset not whitelisted");
-        IERC20(_asset).transferFrom(msg.sender, address(this), _amount);
+        asset.safeTransferFrom(
+            msg.sender,
+            address(this),
+            uint256(uint160(_asset)),
+            _amount,
+            ""
+        );
 
         uint256 share = convertToShare(_asset, _amount);
         _mint(msg.sender, uint256(uint160(_asset)), share, "");
     }
 
-    function withdraw(address _asset, uint256 _share) external {
-        uint256 share = convertToShare(_asset, _share);
+    function withdraw(address _asset, uint256 _amount) external {
+        uint256 share = convertToShare(_asset, _amount);
         _burn(msg.sender, uint256(uint160(_asset)), share);
 
-        IERC20(_asset).transfer(msg.sender, _share);
+        asset.safeTransferFrom(
+            address(this),
+            msg.sender,
+            uint256(uint160(_asset)),
+            _amount,
+            ""
+        );
     }
 
+    // [수정] erc20 -> erc1155
     function borrowAndCallback(
-        address _borrow,
         address _asset,
         uint256 _amount
     ) external onlyOwner {
-        IERC20(_borrow).transferFrom(address(this), msg.sender, _amount);
+        asset.safeTransferFrom(
+            address(this),
+            msg.sender,
+            uint256(uint160(_asset)),
+            _amount,
+            ""
+        );
 
         (uint256 tokenId, uint256 amount) = IBorrowable(msg.sender)
             .borrowCallback();
 
-        // IValuator 가 Tokenization 모듈로 바뀔예정.
         uint256 borrowValue = tokenization.getValue(
             uint256(uint160(_asset)),
             _amount
@@ -80,11 +94,46 @@ contract Lending is ILending, ERC1155, ERC1155Supply, Ownable {
             "Lending: insufficient collateral"
         );
 
-        uint256 debtId = debtNFT.wrap(DebtNFT.WrapParam(tokenId, amount));
+        // 추가해줘야함
+        uint24 deptTypeId;
+        address liquidationModule;
+
+        // [수정] deptId를 리턴해주게 변경
+        uint256 debtId = tokenization.wrap(
+            deptTypeId,
+            abi.encode(tokenId, amount, liquidationModule)
+        );
         borrows[debtId] = BorrowInfo(_asset, _amount, block.timestamp);
 
         // encode 데이터 넣어야함
-        trigger.registerTrigger(debtId, 1, 0.15e12, 0, 0, liquidation, "");
+        //  uint256 collateralToken,
+        // uint256 collateralAmount,
+        // bytes calldata triggerCheckData,
+        // address triggerTarget,
+        // bytes calldata triggerCalldata
+
+        uint256 stopLossLogicId;
+        uint256 stopLoss;
+        bytes memory triggerCheckData = abi.encodePacked(stopLoss);
+        address liquidationAddress;
+
+        uint256 positionId;
+        address liquidator;
+        address prevOwner;
+
+        bytes memory liquidateCalldata = abi.encodePacked(
+            positionId,
+            liquidator,
+            prevOwner
+        );
+
+        bytes memory triggerCalldata = abi.encodeWithSignature(
+            "execute(address,bytes)",
+            liquidationAddress,
+            liquidateCalldata
+        );
+
+        // trigger.registerTrigger(debtId, 1, 0.15e12, 0, 0, liquidation, "");
     }
 
     function repayAndCallback(uint256 _debtId) public {
@@ -114,8 +163,8 @@ contract Lending is ILending, ERC1155, ERC1155Supply, Ownable {
         borrows[_debtId].startTime = 0;
     }
 
-    function liquidate(uint256 _deptId) public override {
-        uint256 isOwner = tokenization.balanceOf(msg.sender, _deptId) != 0
+    function liquidate(uint256 _debtId) public override {
+        uint256 isOwner = tokenization.balanceOf(msg.sender, _debtId) != 0
             ? true
             : false;
 
@@ -144,7 +193,7 @@ contract Lending is ILending, ERC1155, ERC1155Supply, Ownable {
         }
     }
 
-    function calcFee(uint256 _debtId) public returns (uint256) {
+    function calcFee(uint256 _debtId) public view returns (uint256) {
         BorrowInfo memory borrowInfo = borrows[_debtId];
 
         uint256 fee = Math.mulDiv(borrowInfo.debtAmount, borrowFeeRatio, 1e18);
@@ -153,11 +202,11 @@ contract Lending is ILending, ERC1155, ERC1155Supply, Ownable {
     }
 
     function convertToShare(
-        address asset,
+        address _asset,
         uint256 amount
     ) public view returns (uint256) {
-        uint256 _totalDepsoit = banks[asset].totalDeposit;
-        uint256 _totalSupply = totalSupply(uint256(uint160(asset)));
+        uint256 _totalDepsoit = banks[_asset].totalDeposit;
+        uint256 _totalSupply = totalSupply(uint256(uint160(_asset)));
 
         return
             _totalDepsoit == 0
@@ -166,11 +215,11 @@ contract Lending is ILending, ERC1155, ERC1155Supply, Ownable {
     }
 
     function convertToAmount(
-        address asset,
+        address _asset,
         uint256 share
     ) public view returns (uint256) {
-        uint256 _totalDepsoit = banks[asset].totalDeposit;
-        uint256 _totalSupply = totalSupply(uint256(uint160(asset)));
+        uint256 _totalDepsoit = banks[_asset].totalDeposit;
+        uint256 _totalSupply = totalSupply(uint256(uint160(_asset)));
 
         return
             _totalSupply == 0

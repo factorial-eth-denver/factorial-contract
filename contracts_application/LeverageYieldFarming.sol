@@ -1,20 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-// Uncomment this line to use console.log
-// import "hardhat/console.sol";
-
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-
-import "./new/interfaces/FactorialApp.sol";
-import "./new/FactorialPositionManager.sol";
-import "./new/UniConnector.sol";
 import "./Lending.sol";
-import "./interfaces/IBorrowable.sol";
+import "../interfaces/IBorrowable.sol";
 
 contract LeverageYieldFarming is IBorrowable, ERC1155 {
-    FactorialPositionManager public fpm;
-    UniConnector public uni;
+    // UniConnector public uni;
     Lending public lending;
 
     BorrowCache public borrowCache;
@@ -37,8 +28,7 @@ contract LeverageYieldFarming is IBorrowable, ERC1155 {
     }
 
     constructor(address _fpm, address _uni, address _lending) ERC1155("") {
-        fpm = FactorialPositionManager(_fpm);
-        uni = UniConnector(_uni);
+        // uni = UniConnector(_uni);
         lending = Lending(_lending);
     }
 
@@ -51,7 +41,7 @@ contract LeverageYieldFarming is IBorrowable, ERC1155 {
     ) public {
         require(borrowCache.init == false, "already borrowed");
         borrowCache = BorrowCache(true, token0, token1, amount0, amount1);
-        lending.borrowAndMint(token1, amount1);
+        lending.borrowAndCallback(token1, amount1);
 
         // fpm.mint([address(uni)], [id], [1], [token0, token1], [debt0, debt1]);
     }
@@ -65,12 +55,12 @@ contract LeverageYieldFarming is IBorrowable, ERC1155 {
 
         // 스왑같은 코드 추가하려면 여기추가.
 
-        (tokenId, tokenAmount) = uni.mint(
-            borrowCache.token0,
-            borrowCache.token1,
-            borrowCache.amount0,
-            borrowCache.amount1
-        );
+        // (tokenId, tokenAmount) = uni.mint(
+        //     borrowCache.token0,
+        //     borrowCache.token1,
+        //     borrowCache.amount0,
+        //     borrowCache.amount1
+        // );
 
         borrowCache.init = false;
     }
@@ -78,14 +68,13 @@ contract LeverageYieldFarming is IBorrowable, ERC1155 {
     // 포지션을 뭘로받을지 정해야한다.
     function close(uint256 debtId, address closer, address receiver) public {
         // approve는 먼저해야됨.
-        lending.repayAndBurn(_debtId);
+        lending.repayAndCallback(debtId);
     }
 
     function repayCallback(uint256 debtId) public override {
-        (uint256 token0, uint256 amount0, uint256 token1, uint256 amount1) = uni
-            .burn(collateral, collateralAmount);
-
-        uni.swap();
+        // (uint256 token0, uint256 amount0, uint256 token1, uint256 amount1) = uni
+        //     .burn(collateral, collateralAmount);
+        // uni.swap();
     }
 
     function getValue(uint256 id) public view returns (uint256) {
