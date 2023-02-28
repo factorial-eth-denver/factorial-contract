@@ -29,15 +29,12 @@ contract SushiswapConnector is OwnableUpgradeable, UUPSUpgradeable, FactorialCon
     IERC20Upgradeable public sushi;
 
     mapping(uint24 => uint256) public connectionBitMap;
+    mapping(uint256 => uint256) public lpToPoolId;
 
     uint public wrapperTokenType;
 
     /// @dev required by the OZ UUPS module
     function _authorizeUpgrade(address) internal override onlyOwner {}
-
-//
-//    function getPoolId (uint _tokenA, uint _tokenB) external view returns(uint);
-//    function getLP (uint _tokenA, uint _tokenB) external view returns(uint);
 
     function initialize(
         address _tokenization,
@@ -46,7 +43,7 @@ contract SushiswapConnector is OwnableUpgradeable, UUPSUpgradeable, FactorialCon
         address _masterChef,
         address _sushi,
         uint _wrapperTokenType
-    ) public initializer initContext(_asset){
+    ) public initializer initContext(_asset) {
         tokenization = ITokenization(_tokenization);
         connectionPool = IConnectionPool(_connectionPool);
         masterChef = IMasterChef(_masterChef);
@@ -148,8 +145,20 @@ contract SushiswapConnector is OwnableUpgradeable, UUPSUpgradeable, FactorialCon
         IAsset(asset).safeTransferFrom(address(this), _caller, lp, _amount);
     }
 
+    function setPools(uint lp, uint pool) external onlyOwner {
+        lpToPoolId[lp] = pool;
+    }
+
+    function getPoolId(uint _tokenA, uint _tokenB) external view returns (uint256) {
+        return lpToPoolId[getLP(_tokenA, _tokenB)];
+    }
+
+    function getLP(uint _tokenA, uint _tokenB) public view returns (uint256) {
+        return uint256(uint160(IUniswapV2Factory(sushiRouter.factory()).getPair(_tokenA.toAddress(), _tokenB.toAddress())));
+    }
+
     function occupyConnection() internal returns (uint){
-        uint24 connectionId = connectionBitMap.findFirstEmptySpace(connectionPool.getConnectionMax());
+        uint24 connectionId = connectionBitMap.findFirstEmptySpace(connectionPool.getConnectionMax() / 256);
         connectionBitMap.occupy(connectionId);
         return connectionId;
     }
