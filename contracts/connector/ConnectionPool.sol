@@ -16,10 +16,10 @@ contract ConnectionPool is IConnectionPool, OwnableUpgradeable {
 
     mapping(uint256 => uint256) public connectionBitMap;
 
-    uint public nextConnectionId;
-    uint public lastConnectorId;
-    mapping(address => uint) public connectors;
-    mapping(uint => address) public connections;
+    uint256 public nextConnectionId;
+    uint256 public lastConnectorId;
+    mapping(address => uint256) public connectors;
+    mapping(uint256 => address) public connections;
     address public connectionImpl;
 
     /// @dev Register connector.
