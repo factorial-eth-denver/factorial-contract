@@ -9,7 +9,7 @@ import "../../../interfaces/IERC20Ex.sol";
 contract ChainlinkOracle is IPriceOracle, OwnableUpgradeable {
     mapping(address => address) public priceFeeds; // Mapping from token to price feed
 
-    function initialize(address _asset) external initializer {
+    function initialize() external initializer {
         __Ownable_init();
     }
 
