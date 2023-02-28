@@ -57,7 +57,6 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
         (uint256 collateralToken, uint256 collateralAmount, address liquidationModule)
         = abi.decode(_param, (uint256, uint256, address));
 
-
         uint tokenId = (uint256(_tokenType) << 232) + (sequentialN++ << 160) + uint256(uint160(_caller));
 
         // Store states

@@ -16,9 +16,10 @@ import "../../../interfaces/IMortgage.sol";
 import "../../../interfaces/ITrigger.sol";
 import "../../../interfaces/IAsset.sol";
 
+import "../../utils/FactorialContext.sol";
 import "hardhat/console.sol";
 
-contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable {
+contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable, FactorialContext {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using MathUpgradeable for uint256;
     using SafeCastUint256 for uint256;
@@ -30,7 +31,6 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable 
 
     mapping(uint256 => SynthNFT) private tokenInfos;
     ITokenization public tokenization;
-    IAsset public asset;
     uint256 public sequentialN;
 
     /// @dev Throws if called by not valuation module.
@@ -39,10 +39,9 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable 
         _;
     }
 
-    function initialize(address _tokenization, address _asset) public initializer {
+    function initialize(address _tokenization, address _asset) public initializer initContext(_asset){
         __Ownable_init();
         tokenization = ITokenization(_tokenization);
-        asset = IAsset(_asset);
     }
 
     struct WrapParam {
