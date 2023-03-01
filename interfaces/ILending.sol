@@ -12,6 +12,8 @@ interface ILending {
         uint256 _id
     ) external view returns (BorrowInfo memory);
 
+    function getDebt(uint256 _id) external view returns (address, uint256);
+
     function calcFee(uint256 _id) external view returns (uint256);
 
     function liquidate(uint256 _deptId) external;
