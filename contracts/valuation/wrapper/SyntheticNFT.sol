@@ -89,4 +89,8 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable,
     function getTokenInfo(uint _tokenId) external view returns (uint[] memory tokens, uint[] memory amounts){
         return (tokenInfos[_tokenId].underlyingTokens, tokenInfos[_tokenId].underlyingAmounts);
     }
+
+    function getNextTokenId(address _caller, uint24 _tokenType) public view override returns (uint) {
+        return (uint256(_tokenType) << 232) + (sequentialN << 160) + uint256(uint160(_caller));
+    }
 }

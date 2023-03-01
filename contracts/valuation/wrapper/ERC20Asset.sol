@@ -30,4 +30,8 @@ contract ERC20Asset is IWrapper, OwnableUpgradeable {
     function getValue(uint tokenId, uint amount) external view override returns (uint) {
         return oracle.getPrice(address(uint160(tokenId))) * amount;
     }
+
+    function getNextTokenId(address, uint24) public pure override returns (uint) {
+        revert('Not supported');
+    }
 }
