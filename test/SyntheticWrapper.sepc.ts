@@ -11,7 +11,7 @@ import {
 import {loadFixture} from "ethereum-waffle";
 import factorialFixture from "./fixture/factorialFixture";
 import {expect} from "chai";
-import {SYNTHETIC_FT_TOKEN_TYPE, SYNTHETIC_NFT_TOKEN_TYPE} from "./constants";
+import {SYNTHETIC_FT_TOKEN_TYPE, SYNTHETIC_NFT_TOKEN_TYPE} from "./shared/constants";
 
 describe('SyntheticNFT wrapper unit test', () => {
     let weth: MockERC20
@@ -49,7 +49,7 @@ describe('SyntheticNFT wrapper unit test', () => {
             let wethId = await helper.convertAddressToId(weth.address);
             let wrapParam = ethers.utils.AbiCoder.prototype.encode(
                 ['uint256[]', 'uint256[]'],
-                [[usdcId, wethId], [10000, 10000]]
+                [[usdcId, wethId], ["1000000", "1000000000000000000"]]
             );
 
             let wrapCallData = tokenization.interface.encodeFunctionData("wrap",
@@ -64,11 +64,11 @@ describe('SyntheticNFT wrapper unit test', () => {
             let sequentialN = await syntheticNFT.sequentialN();
             let synthTokenId
                 = await helper.combineToId(SYNTHETIC_NFT_TOKEN_TYPE, sequentialN.sub(1), user1.address);
-            expect(await asset.balanceOf(syntheticNFT.address, wethId)).to.equal(10000);
-            expect(await asset.balanceOf(syntheticNFT.address, usdcId)).to.equal(10000);
-            expect((await syntheticNFT.getTokenInfo(synthTokenId)).amounts[0].toString()).to.equal("10000");
-            expect((await syntheticNFT.getTokenInfo(synthTokenId)).amounts[1].toString()).to.equal("10000");
-            expect(await syntheticNFT.getValue(synthTokenId, 10000)).to.equal(20010000000000);
+            expect(await asset.balanceOf(syntheticNFT.address, usdcId)).to.equal("1000000");
+            expect(await asset.balanceOf(syntheticNFT.address, wethId)).to.equal("1000000000000000000");
+            expect((await syntheticNFT.getTokenInfo(synthTokenId)).amounts[0].toString()).to.equal("1000000");
+            expect((await syntheticNFT.getTokenInfo(synthTokenId)).amounts[1].toString()).to.equal("1000000000000000000");
+            expect(await syntheticNFT.getValue(synthTokenId, 10000)).to.equal("2001000000000000000000");
         })
 
         it('#1-3 unwrap success test', async () => {
@@ -94,7 +94,7 @@ describe('SyntheticNFT wrapper unit test', () => {
             let wethId = await helper.convertAddressToId(weth.address);
             let wrapParam = ethers.utils.AbiCoder.prototype.encode(
                 ['uint256[]', 'uint256[]', 'uint256', 'uint256'],
-                [[usdcId, wethId], [10000, 10000], 0, 10000]
+                [[usdcId, wethId], ["1000000", "1000000000000000000"], 0, 10000]
             );
             let wrapCallData = tokenization.interface.encodeFunctionData("wrap",
                 [SYNTHETIC_FT_TOKEN_TYPE, wrapParam])
@@ -108,11 +108,11 @@ describe('SyntheticNFT wrapper unit test', () => {
             let sequentialN = await syntheticFT.sequentialN();
             let synthTokenId
                 = await helper.combineToId(SYNTHETIC_FT_TOKEN_TYPE, sequentialN.sub(1), user1.address);
-            expect(await asset.balanceOf(syntheticFT.address, wethId)).to.equal(10000);
-            expect(await asset.balanceOf(syntheticFT.address, usdcId)).to.equal(10000);
-            expect((await syntheticFT.getTokenInfo(synthTokenId)).amounts[0].toString()).to.equal("10000");
-            expect((await syntheticFT.getTokenInfo(synthTokenId)).amounts[1].toString()).to.equal("10000");
-            expect(await syntheticFT.getValue(synthTokenId, 10000)).to.equal(20010000000000);
+            expect(await asset.balanceOf(syntheticFT.address, usdcId)).to.equal("1000000");
+            expect(await asset.balanceOf(syntheticFT.address, wethId)).to.equal("1000000000000000000");
+            expect((await syntheticFT.getTokenInfo(synthTokenId)).amounts[0].toString()).to.equal("1000000");
+            expect((await syntheticFT.getTokenInfo(synthTokenId)).amounts[1].toString()).to.equal("1000000000000000000");
+            expect(await syntheticFT.getValue(synthTokenId, 10000)).to.equal("2001000000000000000000");
         })
 
         it('#2-3 unwrap success test', async () => {
@@ -128,7 +128,7 @@ describe('SyntheticNFT wrapper unit test', () => {
             let sequentialN = await syntheticFT.sequentialN();
             let synthTokenId
                 = await helper.combineToId(SYNTHETIC_FT_TOKEN_TYPE, sequentialN.sub(1), user1.address);
-            expect(await syntheticFT.getValue(synthTokenId, 1000)).to.equal(2001000000000);
+            expect(await syntheticFT.getValue(synthTokenId, 1000)).to.equal("200100000000000000000");
         })
 
         it('#2-5 unwrap success test', async () => {

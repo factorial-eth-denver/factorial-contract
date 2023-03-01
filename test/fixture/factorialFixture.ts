@@ -16,8 +16,9 @@ import {
 import {
     DEBT_NFT_TOKEN_TYPE,
     SYNTHETIC_FT_TOKEN_TYPE,
-    SYNTHETIC_NFT_TOKEN_TYPE
-} from "../constants";
+    SYNTHETIC_NFT_TOKEN_TYPE,
+    SUSHI_NFT_TOKEN_TYPE
+} from "../shared/constants";
 import {address} from "hardhat/internal/core/config/config-validation";
 
 const factorialFixture: Fixture<{
@@ -60,6 +61,7 @@ const factorialFixture: Fixture<{
     const erc20Asset = await ERC20AssetFactory.deploy() as ERC20Asset;
     const syntheticFT = await SyntheticFTFactory.deploy() as SyntheticFT;
     const syntheticNFT = await SyntheticNFTFactory.deploy() as SyntheticNFT;
+    const sushiNFT = await SyntheticNFTFactory.deploy() as SushiswapV2NFT;
     const helper = await testHelperFactory.deploy() as TestHelper;
 
     await router.initialize(asset.address);
@@ -71,6 +73,7 @@ const factorialFixture: Fixture<{
     await debtNFT.initialize(tokenization.address, asset.address);
     await syntheticFT.initialize(tokenization.address, asset.address);
     await syntheticNFT.initialize(tokenization.address, asset.address);
+    // await sushiNFT.initialize(tokenization.address, farm);
 
     await oracleRouter.setRoute(
         [usdc.address, weth.address],
@@ -86,13 +89,14 @@ const factorialFixture: Fixture<{
     await weth.approve(asset.address, "10000000000000000000000000");
     await usdc.approve(asset.address, "10000000000000000000000000");
 
-    await simplePriceOracle.setPrice(weth.address, '2000000000');
-    await simplePriceOracle.setPrice(usdc.address, '1000000');
+    await simplePriceOracle.setPrice(weth.address, '2000');
+    await simplePriceOracle.setPrice(usdc.address, '1000000000000');
 
     await tokenization.registerTokenType(0, erc20Asset.address);
     await tokenization.registerTokenType(DEBT_NFT_TOKEN_TYPE, debtNFT.address);
     await tokenization.registerTokenType(SYNTHETIC_FT_TOKEN_TYPE, syntheticFT.address);
     await tokenization.registerTokenType(SYNTHETIC_NFT_TOKEN_TYPE, syntheticNFT.address);
+    await tokenization.registerTokenType(SUSHI_NFT_TOKEN_TYPE, syntheticNFT.address);
 
     await asset.registerFactorialModules([
         router.address,

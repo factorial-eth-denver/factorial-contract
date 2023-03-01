@@ -41,7 +41,7 @@ describe('ERC20Asset wrapper unit test', () => {
     describe('#1 wrap simple test', async () => {
         it('#1-1 success test', async () => {
             let usdcId = await helper.convertAddressToId(usdc.address);
-            expect(await erc20Asset.getValue(usdcId, 100)).to.equal(100000000);
+            expect(await erc20Asset.getValue(usdcId, 100)).to.equal(100000000000000);
         })
 
         it('#1-2 warp revert test', async () => {

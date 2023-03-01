@@ -25,7 +25,7 @@ contract FactorialRouter is OwnableUpgradeable {
     /// @dev Call to the target using the given data.
     /// @param _maximumLoss The maximum loss slippage
     /// @param _data The data used in the call.
-    function execute(uint96 _maximumLoss, address _target, bytes calldata _data) external {
+    function execute(uint256 _maximumLoss, address _target, bytes calldata _data) external {
         asset.beforeExecute(_maximumLoss, msg.sender);
         executeInternal(_target, _data);
         asset.afterExecute();
