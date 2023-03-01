@@ -97,8 +97,39 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
         for (uint i = 0; i < token.underlyingTokens.length; i ++) {
             totalValue += tokenization.getValue(token.underlyingTokens[i], token.underlyingAmounts[i]);
         }
-        if (_amount == 0) {
-            return totalValue;
+        return totalValue * _amount / token.totalSupply;
+    }
+
+    function getValueAsCollateral(
+        address _lendingProtocol,
+        uint _tokenId,
+        uint _amount
+    ) public view override returns (uint) {
+        SynthFT memory token = tokenInfos[_tokenId];
+        uint totalValue = 0;
+        for (uint i = 0; i < token.underlyingTokens.length; i ++) {
+            totalValue += tokenization.getValueAsCollateral(
+                _lendingProtocol,
+                token.underlyingTokens[i],
+                token.underlyingAmounts[i]
+            );
+        }
+        return totalValue * _amount / token.totalSupply;
+    }
+
+    function getValueAsDebt(
+        address _lendingProtocol,
+        uint _tokenId,
+        uint _amount
+    ) public view override returns (uint) {
+        SynthFT memory token = tokenInfos[_tokenId];
+        uint totalValue = 0;
+        for (uint i = 0; i < token.underlyingTokens.length; i ++) {
+            totalValue += tokenization.getValueAsDebt(
+                _lendingProtocol,
+                token.underlyingTokens[i],
+                token.underlyingAmounts[i]
+            );
         }
         return totalValue * _amount / token.totalSupply;
     }

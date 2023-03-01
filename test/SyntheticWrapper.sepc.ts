@@ -68,7 +68,7 @@ describe('SyntheticNFT wrapper unit test', () => {
             expect(await asset.balanceOf(syntheticNFT.address, wethId)).to.equal("1000000000000000000");
             expect((await syntheticNFT.getTokenInfo(synthTokenId)).amounts[0].toString()).to.equal("1000000");
             expect((await syntheticNFT.getTokenInfo(synthTokenId)).amounts[1].toString()).to.equal("1000000000000000000");
-            expect(await syntheticNFT.getValue(synthTokenId, 10000)).to.equal("2001000000000000000000");
+            expect(await syntheticNFT.getValue(synthTokenId, 1)).to.equal("2001000000000000000000");
         })
 
         it('#1-3 unwrap success test', async () => {

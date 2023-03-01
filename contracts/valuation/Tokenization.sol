@@ -67,23 +67,33 @@ contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable, Fac
         return IWrapper(tokenTypeSpecs[tokenType]).getValue(_tokenId, _amount);
     }
 
-    function getValueAsCollateral(address lender, uint _tokenId, uint _amount) public view returns (uint) {
+    function getValueAsCollateral(address lendingProtocol, uint _tokenId, uint _amount) public view returns (uint) {
         uint256 tokenType = _tokenId >> 232;
         if (tokenType == 0) tokenType = _tokenId;
-        uint256 customFactor = customValuationFactors[lender][tokenType].collateralFactor;
+        uint256 customFactor = customValuationFactors[lendingProtocol][tokenType].collateralFactor;
         uint256 guideFactor = guideValuationFactors[tokenType].collateralFactor;
-
-        uint256 collateralFactor = customFactor > guideFactor ? guideFactor : customFactor;
+        uint256 collateralFactor;
+        if(customFactor == 0)
+        {
+            collateralFactor = guideFactor;
+        } else {
+            collateralFactor = customFactor > guideFactor ? guideFactor : customFactor;
+        }
         return IWrapper(tokenTypeSpecs[uint24(_tokenId >> 232)]).getValue(_tokenId, _amount) * collateralFactor / 10000;
     }
 
-    function getValueAsDebt(address lender, uint _tokenId, uint _amount) public view returns (uint) {
+    function getValueAsDebt(address lendingProtocol, uint _tokenId, uint _amount) public view returns (uint) {
         uint256 tokenType = _tokenId >> 232;
         if (tokenType == 0) tokenType = _tokenId;
-        uint256 customFactor = customValuationFactors[lender][tokenType].debtFactor;
+        uint256 customFactor = customValuationFactors[lendingProtocol][tokenType].debtFactor;
         uint256 guideFactor = guideValuationFactors[tokenType].debtFactor;
-
-        uint256 borrowFactor = customFactor < guideFactor ? guideFactor : customFactor;
-        return IWrapper(tokenTypeSpecs[uint24(_tokenId >> 232)]).getValue(_tokenId, _amount) * borrowFactor / 10000;
+        uint256 debtFactor;
+        if(customFactor == 0)
+        {
+            debtFactor = guideFactor;
+        } else {
+            debtFactor = customFactor > guideFactor ? guideFactor : customFactor;
+        }
+        return IWrapper(tokenTypeSpecs[uint24(_tokenId >> 232)]).getValue(_tokenId, _amount) * debtFactor / 10000;
     }
 }

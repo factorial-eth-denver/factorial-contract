@@ -39,7 +39,7 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable,
         _;
     }
 
-    function initialize(address _tokenization, address _asset) public initializer initContext(_asset){
+    function initialize(address _tokenization, address _asset) public initializer initContext(_asset) {
         __Ownable_init();
         tokenization = ITokenization(_tokenization);
     }
@@ -82,6 +82,32 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable,
         uint totalValue = 0;
         for (uint i = 0; i < token.underlyingTokens.length; i ++) {
             totalValue += tokenization.getValue(token.underlyingTokens[i], token.underlyingAmounts[i]);
+        }
+        return totalValue;
+    }
+
+    function getValueAsCollateral(address _lendingProtocol, uint _tokenId, uint _amount) public view override returns (uint) {
+        SynthNFT memory token = tokenInfos[_tokenId];
+        uint totalValue = 0;
+        for (uint i = 0; i < token.underlyingTokens.length; i ++) {
+            totalValue += tokenization.getValueAsCollateral(
+                _lendingProtocol,
+                token.underlyingTokens[i],
+                token.underlyingAmounts[i]
+            );
+        }
+        return totalValue;
+    }
+
+    function getValueAsDebt(address _lendingProtocol, uint _tokenId, uint _amount) public view override returns (uint) {
+        SynthNFT memory token = tokenInfos[_tokenId];
+        uint totalValue = 0;
+        for (uint i = 0; i < token.underlyingTokens.length; i ++) {
+            totalValue += tokenization.getValueAsDebt(
+                _lendingProtocol,
+                token.underlyingTokens[i],
+                token.underlyingAmounts[i]
+            );
         }
         return totalValue;
     }

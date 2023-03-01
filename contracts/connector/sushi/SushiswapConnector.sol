@@ -5,17 +5,17 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "../../interfaces/external/IUniswapV2Factory.sol";
-import "../../interfaces/external/IUniswapV2Router.sol";
-import "../../interfaces/external/IMasterChef.sol";
-import "../../interfaces/IConnection.sol";
-import "../../interfaces/IConnectionPool.sol";
-import "../../interfaces/ITokenization.sol";
-import "../../interfaces/IAsset.sol";
+import "../../../interfaces/external/IUniswapV2Factory.sol";
+import "../../../interfaces/external/IUniswapV2Router.sol";
+import "../../../interfaces/external/IMasterChef.sol";
+import "../../../interfaces/IConnection.sol";
+import "../../../interfaces/IConnectionPool.sol";
+import "../../../interfaces/ITokenization.sol";
+import "../../../interfaces/IAsset.sol";
 
-import "./library/ConnectionBitmap.sol";
-import "./library/SafeCastUint256.sol";
-import "../utils/FactorialContext.sol";
+import "../library/ConnectionBitmap.sol";
+import "../library/SafeCastUint256.sol";
+import "../../utils/FactorialContext.sol";
 
 contract SushiswapConnector is OwnableUpgradeable, UUPSUpgradeable, FactorialContext {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -41,13 +41,13 @@ contract SushiswapConnector is OwnableUpgradeable, UUPSUpgradeable, FactorialCon
         address _asset,
         address _connectionPool,
         address _masterChef,
-        address _sushi,
         uint _wrapperTokenType
     ) public initializer initContext(_asset) {
+        __Ownable_init();
         tokenization = ITokenization(_tokenization);
         connectionPool = IConnectionPool(_connectionPool);
         masterChef = IMasterChef(_masterChef);
-        sushi = IERC20Upgradeable(_sushi);
+        sushi = IERC20Upgradeable(masterChef.sushi());
         wrapperTokenType = _wrapperTokenType;
     }
 
@@ -99,7 +99,7 @@ contract SushiswapConnector is OwnableUpgradeable, UUPSUpgradeable, FactorialCon
         return (amountA, amountB);
     }
 
-    function deposit(uint _pid, uint _amount) external {
+    function deposit(uint _pid, uint _amount) external returns (uint){
         uint connectionId = occupyConnection();
         address connection = connectionPool.getConnectionAddress(connectionId);
         bytes memory callData = abi.encodeWithSignature(
@@ -109,6 +109,7 @@ contract SushiswapConnector is OwnableUpgradeable, UUPSUpgradeable, FactorialCon
         IConnection(connection).execute(address(this), callData);
         uint tokenId = (wrapperTokenType << 232) + (connectionId << 80) + (_pid);
         asset.mint(msgSender(), tokenId, 1);
+        return tokenId;
     }
 
     function deposit(uint _pid, uint _amount, address _masterChef, address _sushi, address _caller) external {

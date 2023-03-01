@@ -53,7 +53,7 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
         address _caller,
         uint24 _tokenType,
         bytes memory _param
-    ) external override onlyTokenization returns(uint) {
+    ) external override onlyTokenization returns (uint) {
         (uint256 collateralToken, uint256 collateralAmount, address liquidationModule)
         = abi.decode(_param, (uint256, uint256, address));
 
@@ -83,11 +83,47 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
     function getValue(uint _tokenId, uint) public view override returns (uint){
         DebtToken memory nft = tokenInfos[_tokenId];
         uint collateralValue = tokenization.getValue(nft.collateralToken, nft.collateralAmount);
-        (uint debtTokenType, uint debtAmount) = IMortgage(address(uint160(_tokenId))).getDebt(_tokenId);
-        if (collateralValue < (debtTokenType * debtAmount)) {
+        (uint debtTokenId, uint debtAmount) = IMortgage(address(uint160(_tokenId))).getDebt(_tokenId);
+        uint debTokenValue = tokenization.getValue(debtTokenId, debtAmount);
+        if (collateralValue < debTokenValue) {
             return 0;
         }
-        return collateralValue - (debtTokenType * debtAmount);
+        return collateralValue - debTokenValue;
+    }
+
+    function getValueWithFactor(address _lendingProtocol, uint _tokenId, uint) public view returns (uint){
+        DebtToken memory nft = tokenInfos[_tokenId];
+        uint collateralValue = tokenization.getValueAsCollateral(
+            _lendingProtocol,
+            nft.collateralToken,
+            nft.collateralAmount
+        );
+        (uint debtTokenId, uint debtAmount) = IMortgage(address(uint160(_tokenId))).getDebt(_tokenId);
+        uint debtValue = tokenization.getValueAsDebt(
+            _lendingProtocol,
+            debtTokenId,
+            debtAmount
+        );
+        if (collateralValue < (debtValue)) {
+            return 0;
+        }
+        return collateralValue - debtValue;
+    }
+
+    function getValueAsCollateral(
+        address,
+        uint,
+        uint
+    ) public pure override returns (uint) {
+        revert('Not supported');
+    }
+
+    function getValueAsDebt(
+        address,
+        uint,
+        uint
+    ) public pure override returns (uint) {
+        revert('Not supported');
     }
 
     function getNextTokenId(address _caller, uint24 _tokenType) public view override returns (uint) {
