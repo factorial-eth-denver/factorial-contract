@@ -30,16 +30,17 @@ contract LiquidationAuction is ILiquidationModule {
     }
 
     struct ExecuteParams {
-        uint256 positionId;
         uint256 period;
     }
 
-    constructor(address _tokenization, address _debtNFT) {
+    constructor(address _liquidation, address _tokenization, address _debtNFT, address _asset) {
+        liquidation = Liquidation(_liquidation);
         tokenization = Tokenization(_tokenization);
         debtNFT = DebtNFT(_debtNFT);
+        asset = IAsset(_asset);
     }
 
-    function execute(address liquidator, bytes calldata data) public {
+    function execute(address liquidator, uint256 positionId, bytes calldata data) public {
         ExecuteParams memory params = abi.decode(data, (ExecuteParams));
         // (
         //     uint256 collateralToken,
@@ -49,7 +50,7 @@ contract LiquidationAuction is ILiquidationModule {
 
         auctions.push(
             Auction(
-                params.positionId,
+                positionId,
                 block.timestamp + params.period,
                 0,
                 address(0),

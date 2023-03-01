@@ -30,6 +30,7 @@ contract Liquidation {
 
     function execute(
         address liquidationModule,
+        uint256 tokenId,
         bytes calldata data
     ) public onlyTrigger {
         require(
@@ -38,10 +39,17 @@ contract Liquidation {
         );
         //  = tokenization.ownerOf(positionId);
         // 만들어야 할것 Take Dept Position
+        // tokenization.safeTransferFrom(
+        //     msg.sender,
+        //     address(this),
+        //     tokenId,
+        //     1,
+        //     ""
+        // );
 
         ILiquidationModule module = modules[liquidationModule];
-        address liquidator = msg.sender;
-        module.execute(liquidator, data); //[수정]
+        address liquidator = asset.caller();
+        module.execute(liquidator, tokenId, data); //[수정]
 
         // ILending lending = ILending(address(uint160(positionId)));
         // deptNFT.transferFrom(liquidator, address(this), positionId);
