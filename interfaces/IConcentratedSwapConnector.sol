@@ -10,8 +10,5 @@ interface IConcentratedDexConnector {
         int24 _tickUpper
     ) external returns (uint tokenId);
 
-    function burn(
-        uint256 _tokenId,
-        uint128 _liquidity
-    ) external returns (uint amountA, uint amountB);
+    function burn(uint256 _tokenId, uint128 _liquidity) external;
 }

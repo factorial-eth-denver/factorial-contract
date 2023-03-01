@@ -120,18 +120,18 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         uint pid = uint256(uint80(_tokenId));
         address connection = connectionPool.getConnectionAddress(connectionId);
         bytes memory callData = abi.encodeWithSignature(
-            "deposit(uint256,uint256,address,address,address)",
-            pid, _amount, masterChef, sushi, msgSender()
+            "deposit(uint256,uint256,address,address,address,address)",
+            pid, _amount, address(asset), address(masterChef), address(sushi), msgSender()
         );
         IConnection(connection).execute(address(this), callData);
     }
 
-    function deposit(uint _pid, uint _amount, address _masterChef, address _sushi, address _caller) external {
+    function deposit(uint _pid, uint _amount, address _asset, address _masterChef, address _sushi, address _caller) external {
         (address lp, , ,) = IMasterChef(_masterChef).poolInfo(_pid);
-        IAsset(asset).safeTransferFrom(_caller, address(this), lp, _amount);
+        IAsset(_asset).safeTransferFrom(_caller, address(this), lp, _amount);
         IERC20Upgradeable(lp).approve(_masterChef, _amount);
         IMasterChef(_masterChef).deposit(_pid, _amount);
-        IAsset(asset).safeTransferFrom(
+        IAsset(_asset).safeTransferFrom(
             address(this), _caller, _sushi, IERC20Upgradeable(_sushi).balanceOf(address(this))
         );
     }
@@ -143,8 +143,8 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         address connection = connectionPool.getConnectionAddress(connectionId);
         require(!connectionBitMap.isEmpty(connectionId), 'Empty connection');
         bytes memory callData = abi.encodeWithSignature(
-            "withdraw(uint256,uint256,address,address,address)",
-            pid, _amount, masterChef, sushi, msgSender()
+            "withdraw(uint256,uint256,address,address,address,address)",
+            pid, _amount, address(asset), address(masterChef), address(sushi), msgSender()
         );
         IConnection(connection).execute(address(this), callData);
         (uint amount,) = masterChef.userInfo(pid, connection);
@@ -154,13 +154,13 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         }
     }
 
-    function withdraw(uint _pid, uint _amount, address _masterChef, address _sushi, address _caller) external {
+    function withdraw(uint _pid, uint _amount, address _asset, address _masterChef, address _sushi, address _caller) external {
         (address lp, , ,) = IMasterChef(_masterChef).poolInfo(_pid);
         IMasterChef(_masterChef).withdraw(_pid, _amount);
-        IAsset(asset).safeTransferFrom(
+        IAsset(_asset).safeTransferFrom(
             address(this), _caller, _sushi, IERC20Upgradeable(_sushi).balanceOf(address(this))
         );
-        IAsset(asset).safeTransferFrom(address(this), _caller, lp, _amount);
+        IAsset(_asset).safeTransferFrom(address(this), _caller, lp, _amount);
     }
 
     function setPools(uint lp, uint pool) external onlyOwner {

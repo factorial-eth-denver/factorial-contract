@@ -15,6 +15,7 @@ import "../../../interfaces/external/IUniswapV3Factory.sol";
 import "../../../interfaces/IDexConnector.sol";
 import "../../../interfaces/IConcentratedSwapConnector.sol";
 import "../../../interfaces/IConnectionPool.sol";
+import "../../../interfaces/IConnection.sol";
 
 import "../library/ConnectionBitmap.sol";
 import "../library/SafeCastUint256.sol";
@@ -100,7 +101,7 @@ contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, Factori
     function buy(uint256 _yourToken, uint256 _wantToken, uint256 _amount, uint24 _fee) external override {
         cache.currentSwapPool = factory.getPool(_yourToken.toAddress(), _wantToken.toAddress(), _fee);
         bool zeroForOne = (_yourToken.toAddress() == IUniswapV3Pool(cache.currentSwapPool).token0()) ? true : false;
-        if(zeroForOne) {
+        if (zeroForOne) {
             cache.token0 = _yourToken;
             cache.token1 = _wantToken;
         } else {
@@ -111,7 +112,7 @@ contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, Factori
         IUniswapV3Pool(cache.currentSwapPool).swap(
             address(this),
             zeroForOne,
-            int256(_amount) * (-1),
+            int256(_amount) * (- 1),
             (zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1),
             new bytes(0)
         );
@@ -123,7 +124,7 @@ contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, Factori
     function sell(uint _yourToken, uint _wantToken, uint _amount, uint24 _fee) external override {
         cache.currentSwapPool = factory.getPool(_yourToken.toAddress(), _wantToken.toAddress(), _fee);
         bool zeroForOne = (_yourToken.toAddress() == IUniswapV3Pool(cache.currentSwapPool).token0()) ? true : false;
-        if(zeroForOne) {
+        if (zeroForOne) {
             cache.token0 = _yourToken;
             cache.token1 = _wantToken;
         } else {
@@ -179,7 +180,7 @@ contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, Factori
             amount1
         );
 
-        (uint256 amount0delta, uint256 amount1delta) = IUniswapV3Pool(cache.currentSwapPool).mint(
+        IUniswapV3Pool(cache.currentSwapPool).mint(
             address(this),
             _tickLower,
             _tickUpper,
@@ -205,46 +206,70 @@ contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, Factori
     function burn(
         uint256 _tokenId,
         uint128 _liquidity
-    ) external override returns (
-        uint256 amount0,
-        uint256 amount1
-    ) {
+    ) external override {
         require(asset.balanceOf(msgSender(), _tokenId) == 1, 'Not token owner');
+        uint24 connectionId = uint24(_tokenId >> 184);
+
+        bytes memory callData = abi.encodeWithSignature(
+            "burnLogic(uint256,uint128,address,address)", _tokenId, _liquidity, address(asset), address(this)
+        );
+        address connection = connectionPool.getConnectionAddress(connectionId);
+        IConnection(connection).execute(address(this), callData);
+
         address pool = address(uint160(_tokenId));
         int24 tickLower = int24(uint24(_tokenId >> 208));
         int24 tickUpper = int24(uint24(_tokenId >> 184));
-        uint24 connectionId = uint24(_tokenId >> 184);
 
-        (amount0, amount1) = IUniswapV3Pool(pool).burn(tickLower, tickUpper, _liquidity);
-
-        bytes32 positionKey = PositionKey.compute(address(this), tickLower, tickUpper);
+        bytes32 positionKey = PositionKey.compute(address(connection), tickLower, tickUpper);
         (uint128 remainingLiquidity, , , ,) = IUniswapV3Pool(pool).positions(positionKey);
         if (remainingLiquidity == 0) {
             asset.burn(msgSender(), _tokenId, 1);
-            connectionBitMap.release(connectionId);
-            (amount0, amount1) = IUniswapV3Pool(pool).collect(
-                msgSender(),
-                tickLower,
-                tickUpper,
-                type(uint128).max,
-                type(uint128).max
+            bytes memory callData = abi.encodeWithSignature(
+                "harvestLogic(uint256,address)", _tokenId, address(this)
             );
+            IConnection(connection).execute(address(this), callData);
+            connectionBitMap.release(connectionId);
         }
+    }
+
+    function burnLogic(
+        uint256 _tokenId,
+        uint128 _liquidity,
+        address _asset,
+        address _caller
+    ) external {
+        address pool = address(uint160(_tokenId));
+        int24 tickLower = int24(uint24(_tokenId >> 208));
+        int24 tickUpper = int24(uint24(_tokenId >> 184));
+        address token0 = IUniswapV3Pool(pool).token0();
+        address token1 = IUniswapV3Pool(pool).token1();
+        IUniswapV3Pool(pool).burn(tickLower, tickUpper, _liquidity);
+        IAsset(_asset).safeTransferFrom(_caller, _caller, token0, IERC20Upgradeable(token0).balanceOf(address(this)));
+        IAsset(_asset).safeTransferFrom(_caller, _caller, token1, IERC20Upgradeable(token1).balanceOf(address(this)));
     }
 
     function harvest(
         uint256 _tokenId
-    ) internal returns (
-        uint128 amount0,
-        uint128 amount1
-    ) {
+    ) external {
         require(asset.balanceOf(msgSender(), _tokenId) == 1, 'Not token owner');
+        uint24 connectionId = uint24(_tokenId >> 160);
+        bytes memory callData = abi.encodeWithSignature(
+            "harvestLogic(uint256,address)", _tokenId, msgSender()
+        );
+        address connection = connectionPool.getConnectionAddress(connectionId);
+        IConnection(connection).execute(address(this), callData);
+    }
+
+    function harvestLogic(
+        uint256 _tokenId,
+        address _caller
+    ) external {
         address pool = address(uint160(_tokenId));
         int24 tickLower = int24(uint24(_tokenId >> 208));
         int24 tickUpper = int24(uint24(_tokenId >> 184));
         // the actual amounts collected are returned
-        (amount0, amount1) = IUniswapV3Pool(pool).collect(
-            msgSender(),
+        IUniswapV3Pool(pool).collect(
+            _caller,
             tickLower,
             tickUpper,
             type(uint128).max,
