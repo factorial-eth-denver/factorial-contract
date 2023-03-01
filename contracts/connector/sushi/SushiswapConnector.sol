@@ -53,7 +53,7 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         wrapperTokenType = _wrapperTokenType;
     }
 
-    function buy(uint _yourToken, uint _wantToken, uint _amount) external override {
+    function buy(uint _yourToken, uint _wantToken, uint _amount, uint24) external override {
         uint balance = asset.balanceOf(msgSender(), _yourToken);
         asset.safeTransferFrom(msgSender(), address(this), _yourToken, balance, '');
         address[] memory path = new address[](2);
@@ -63,7 +63,7 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         asset.safeTransferFrom(address(this), msgSender(), _yourToken, left, '');
     }
 
-    function sell(uint _yourToken, uint _wantToken, uint _amount) external override {
+    function sell(uint _yourToken, uint _wantToken, uint _amount, uint24) external override {
         asset.safeTransferFrom(msgSender(), address(this), _yourToken, _amount, '');
         address[] memory path = new address[](2);
         (path[0], path[1]) = (_yourToken.toAddress(), _wantToken.toAddress());

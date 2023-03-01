@@ -97,12 +97,50 @@ contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, Factori
         IERC20Upgradeable(cache.token1.toAddress()).safeTransfer(cache.currentSwapPool, uint256(_amount1Delta));
     }
 
-    function buy(uint _yourToken, uint _wantToken, uint _amount) external {
+    function buy(uint256 _yourToken, uint256 _wantToken, uint256 _amount, uint24 _fee) external override {
+        cache.currentSwapPool = factory.getPool(_yourToken.toAddress(), _wantToken.toAddress(), _fee);
+        bool zeroForOne = (_yourToken.toAddress() == IUniswapV3Pool(cache.currentSwapPool).token0()) ? true : false;
+        if(zeroForOne) {
+            cache.token0 = _yourToken;
+            cache.token1 = _wantToken;
+        } else {
+            cache.token0 = _wantToken;
+            cache.token1 = _yourToken;
+        }
 
+        IUniswapV3Pool(cache.currentSwapPool).swap(
+            address(this),
+            zeroForOne,
+            int256(_amount) * (-1),
+            (zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1),
+            new bytes(0)
+        );
+        cache.currentSwapPool = address(0);
+        cache.token0 = 0;
+        cache.token1 = 0;
     }
 
-    function sell(uint _yourToken, uint _wantToken, uint _amount) external {
+    function sell(uint _yourToken, uint _wantToken, uint _amount, uint24 _fee) external override {
+        cache.currentSwapPool = factory.getPool(_yourToken.toAddress(), _wantToken.toAddress(), _fee);
+        bool zeroForOne = (_yourToken.toAddress() == IUniswapV3Pool(cache.currentSwapPool).token0()) ? true : false;
+        if(zeroForOne) {
+            cache.token0 = _yourToken;
+            cache.token1 = _wantToken;
+        } else {
+            cache.token0 = _wantToken;
+            cache.token1 = _yourToken;
+        }
 
+        IUniswapV3Pool(cache.currentSwapPool).swap(
+            address(this),
+            zeroForOne,
+            int256(_amount),
+            (zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1),
+            new bytes(0)
+        );
+        cache.currentSwapPool = address(0);
+        cache.token0 = 0;
+        cache.token1 = 0;
     }
 
     function mint(
@@ -180,11 +218,11 @@ contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, Factori
         (amount0, amount1) = IUniswapV3Pool(pool).burn(tickLower, tickUpper, _liquidity);
 
         bytes32 positionKey = PositionKey.compute(address(this), tickLower, tickUpper);
-        (uint128 remainingLiquidity, , , ,) = IUniswapV3Pool(cache.currentSwapPool).positions(positionKey);
+        (uint128 remainingLiquidity, , , ,) = IUniswapV3Pool(pool).positions(positionKey);
         if (remainingLiquidity == 0) {
             asset.burn(msgSender(), _tokenId, 1);
             connectionBitMap.release(connectionId);
-            (amount0, amount1) = IUniswapV3Pool(cache.currentSwapPool).collect(
+            (amount0, amount1) = IUniswapV3Pool(pool).collect(
                 msgSender(),
                 tickLower,
                 tickUpper,
@@ -205,7 +243,7 @@ contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, Factori
         int24 tickLower = int24(uint24(_tokenId >> 208));
         int24 tickUpper = int24(uint24(_tokenId >> 184));
         // the actual amounts collected are returned
-        (amount0, amount1) = IUniswapV3Pool(cache.currentSwapPool).collect(
+        (amount0, amount1) = IUniswapV3Pool(pool).collect(
             msgSender(),
             tickLower,
             tickUpper,
