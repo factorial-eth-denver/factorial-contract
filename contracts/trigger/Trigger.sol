@@ -50,6 +50,7 @@ contract Trigger {
     }
 
     function registerTrigger(
+        address owner,
         uint256 collateralToken,
         uint256 collateralAmount,
         uint256 triggerLogicId,
@@ -73,7 +74,7 @@ contract Trigger {
         triggerLastIndex[triggerLogicId]++;
 
         triggerInfos[triggerKey] = TriggerInfo(
-            msg.sender,
+            owner,
             _initialValue,
             collateralToken,
             collateralAmount,
