@@ -28,11 +28,11 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
         uint256 outputValue;
     }
 
-    /// ----- SETTING STATES -----
-    VariableCache public cache;
-    ITokenization public tokenization;
-
     /// ----- VARIABLE STATES -----
+    VariableCache public cache;
+
+    /// ----- SETTING STATES -----
+    ITokenization public tokenization;
     mapping(address => bool) public factorialModules;
     mapping(uint256 => address) public ownerOf;
     address public router;

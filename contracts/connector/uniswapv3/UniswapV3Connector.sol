@@ -1,0 +1,222 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+pragma abicoder v2;
+
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
+import '@uniswap/v3-core/contracts/libraries/FixedPoint128.sol';
+import '@uniswap/v3-core/contracts/libraries/SqrtPriceMath.sol';
+
+import "../../utils/FactorialContext.sol";
+
+import "../../../interfaces/external/IUniswapV3Factory.sol";
+import "../../../interfaces/IDexConnector.sol";
+import "../../../interfaces/IConcentratedSwapConnector.sol";
+import "../../../interfaces/IConnectionPool.sol";
+
+import "../library/ConnectionBitmap.sol";
+import "../library/SafeCastUint256.sol";
+
+import "./library/OptimalSwap.sol";
+import "./library/TickMathWithSpacing.sol";
+import "./library/SafeCastExtend.sol";
+import "./library/PositionKey.sol";
+import "./library/LiquidityAmounts.sol";
+
+/// @title Uniswap v3 auto rebalancing contract
+contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, FactorialContext {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeCastExtend for uint256;
+    using SafeCastUint256 for uint256;
+    using SafeCast for uint256;
+    using SafeCast for int256;
+    using ConnectionBitmap for mapping(uint24 => uint256);
+
+    // @dev Uniswap v3 factory.
+    IUniswapV3Factory public factory;
+    IConnectionPool public connectionPool;
+    uint public wrapperTokenType;
+    mapping(uint24 => uint256) public connectionBitMap;
+
+    // Cache
+    struct VariableCache {
+        address currentSwapPool;
+        uint256 token0;
+        uint256 token1;
+    }
+
+    /// ----- VARIABLE STATES -----
+    VariableCache public cache;
+    address public currentSwapPool;
+
+    /// @dev Prevent calling a function from anyone except UniswapV3 current pool.
+    modifier onlySwapPool() {
+        require(msg.sender == cache.currentSwapPool, "onlyPool: Unauthorized.");
+        _;
+    }
+
+    function initialize(
+        address _asset,
+        address _factory,
+        address _connectionPool,
+        uint _wrapperTokenType
+    ) external initContext(_asset) {
+        factory = IUniswapV3Factory(_factory);
+        wrapperTokenType = _wrapperTokenType;
+        connectionPool = IConnectionPool(_connectionPool);
+    }
+
+    /// @dev Uniswap v3 mint callback function with no data
+    /// @param _amount0 amount of token0 for minting
+    /// @param _amount1 amount of token1 for minting
+    function uniswapV3MintCallback(
+        uint256 _amount0,
+        uint256 _amount1,
+        bytes calldata
+    ) external onlySwapPool {
+        if (_amount0 > 0) IERC20Upgradeable(cache.token0.toAddress()).safeTransfer(cache.currentSwapPool, _amount0);
+        if (_amount1 > 0) IERC20Upgradeable(cache.token1.toAddress()).safeTransfer(cache.currentSwapPool, _amount1);
+    }
+
+    /// @dev Uniswap v3 swap callback function with no data
+    /// @param _amount0Delta delta amount of token0 in swap
+    /// @param _amount1Delta delta amount of token1 in swap
+    function uniswapV3SwapCallback(
+        int256 _amount0Delta,
+        int256 _amount1Delta,
+        bytes calldata
+    ) external onlySwapPool {
+        require(_amount0Delta > 0 || _amount1Delta > 0);
+
+        if (_amount0Delta > 0) {
+            IERC20Upgradeable(cache.token0.toAddress()).safeTransfer(cache.currentSwapPool, uint256(_amount0Delta));
+            return;
+        }
+        IERC20Upgradeable(cache.token1.toAddress()).safeTransfer(cache.currentSwapPool, uint256(_amount1Delta));
+    }
+
+    function buy(uint _yourToken, uint _wantToken, uint _amount) external {
+
+    }
+
+    function sell(uint _yourToken, uint _wantToken, uint _amount) external {
+
+    }
+
+    function mint(
+        uint[] calldata _tokens,
+        uint[] calldata _amounts,
+        uint24 _fee,
+        int24 _tickLower,
+        int24 _tickUpper
+    ) external override returns (uint tokenId){
+        cache.currentSwapPool = factory.getPool(_tokens[0].toAddress(), _tokens[1].toAddress(), _fee);
+        uint amount0;
+        uint amount1;
+        if (_tokens[0].toAddress() == IUniswapV3Pool(cache.currentSwapPool).token0()) {
+            cache.token0 = _tokens[0];
+            cache.token1 = _tokens[1];
+            amount0 = _amounts[0];
+            amount1 = _amounts[1];
+        } else {
+            cache.token0 = _tokens[1];
+            cache.token1 = _tokens[0];
+            amount0 = _amounts[1];
+            amount1 = _amounts[0];
+        }
+        uint connectionId = occupyConnection();
+
+        uint160 lowerSqrtRatioX96 = TickMath.getSqrtRatioAtTick(_tickLower);
+        uint160 upperSqrtRatioX96 = TickMath.getSqrtRatioAtTick(_tickUpper);
+
+        (uint160 sqrtPriceX96, , , , , ,) = IUniswapV3Pool(cache.currentSwapPool).slot0();
+
+        uint128 liquidityDelta = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            lowerSqrtRatioX96,
+            upperSqrtRatioX96,
+            amount0,
+            amount1
+        );
+
+        (uint256 amount0delta, uint256 amount1delta) = IUniswapV3Pool(cache.currentSwapPool).mint(
+            address(this),
+            _tickLower,
+            _tickUpper,
+            liquidityDelta,
+            new bytes(0)
+        );
+        tokenId = (wrapperTokenType << 232)
+        + (uint256(uint24(_tickLower)) << 208)
+        + (uint256(uint24(_tickUpper)) << 184)
+        + (connectionId << 160)
+        + uint256(uint160(currentSwapPool));
+
+        asset.mint(msgSender(), tokenId, 1);
+        cache.currentSwapPool = address(0);
+        cache.token0 = 0;
+        cache.token1 = 0;
+        return tokenId;
+    }
+
+    /// @dev Burn uniswap v3 liquidity.
+    /// @param _tokenId token id
+    /// @param _liquidity liquidity to burn
+    function burn(
+        uint256 _tokenId,
+        uint128 _liquidity
+    ) external override returns (
+        uint256 amount0,
+        uint256 amount1
+    ) {
+        require(asset.balanceOf(msgSender(), _tokenId) == 1, 'Not token owner');
+        address pool = address(uint160(_tokenId));
+        int24 tickLower = int24(uint24(_tokenId >> 208));
+        int24 tickUpper = int24(uint24(_tokenId >> 184));
+        uint24 connectionId = uint24(_tokenId >> 184);
+
+        (amount0, amount1) = IUniswapV3Pool(pool).burn(tickLower, tickUpper, _liquidity);
+
+        bytes32 positionKey = PositionKey.compute(address(this), tickLower, tickUpper);
+        (uint128 remainingLiquidity, , , ,) = IUniswapV3Pool(cache.currentSwapPool).positions(positionKey);
+        if (remainingLiquidity == 0) {
+            asset.burn(msgSender(), _tokenId, 1);
+            connectionBitMap.release(connectionId);
+            (amount0, amount1) = IUniswapV3Pool(cache.currentSwapPool).collect(
+                msgSender(),
+                tickLower,
+                tickUpper,
+                type(uint128).max,
+                type(uint128).max
+            );
+        }
+    }
+
+    function harvest(
+        uint256 _tokenId
+    ) internal returns (
+        uint128 amount0,
+        uint128 amount1
+    ) {
+        require(asset.balanceOf(msgSender(), _tokenId) == 1, 'Not token owner');
+        address pool = address(uint160(_tokenId));
+        int24 tickLower = int24(uint24(_tokenId >> 208));
+        int24 tickUpper = int24(uint24(_tokenId >> 184));
+        // the actual amounts collected are returned
+        (amount0, amount1) = IUniswapV3Pool(cache.currentSwapPool).collect(
+            msgSender(),
+            tickLower,
+            tickUpper,
+            type(uint128).max,
+            type(uint128).max
+        );
+    }
+
+    function occupyConnection() internal returns (uint){
+        uint24 connectionId = connectionBitMap.findFirstEmptySpace(connectionPool.getConnectionMax() / 256);
+        connectionBitMap.occupy(connectionId);
+        return connectionId;
+    }
+}
