@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "../../interfaces/IBorrowable.sol";
@@ -9,7 +10,7 @@ import "../../contracts/valuation/wrapper/DebtNFT.sol";
 import "../../contracts/connector/SushiswapConnector.sol";
 import "./Lending.sol";
 
-contract LeverageYieldFarming is IBorrowable, ERC1155, Ownable {
+contract LeverageYieldFarming is IBorrowable, ERC1155Holder, Ownable {
     // UniConnector public uni;
     DebtNFT public debtNFT;
     Lending public lending;
@@ -30,7 +31,7 @@ contract LeverageYieldFarming is IBorrowable, ERC1155, Ownable {
         address lp;
     }
 
-    constructor(address _fpm, address _uni, address _lending) ERC1155("") {
+    constructor(address _fpm, address _uni, address _lending) {
         // uni = UniConnector(_uni);
         lending = Lending(_lending);
     }
@@ -61,14 +62,13 @@ contract LeverageYieldFarming is IBorrowable, ERC1155, Ownable {
         require(borrowCache.init == false, "already borrowed");
         // borrowCache = BorrowCache(true, token0, token1, amount0, amount1);
 
-        lending.borrowAndCallback(token1, amount1);
+        // lending.borrowAndCallback(token1, amount1);
         // fpm.mint([address(uni)], [id], [1], [token0, token1], [debt0, debt1]);
     }
 
     function borrowCallback()
         public
         override
-        returns (uint256 tokenId, uint256 tokenAmount)
     {
         require(borrowCache.init == true, "not borrowed");
 
@@ -143,9 +143,5 @@ contract LeverageYieldFarming is IBorrowable, ERC1155, Ownable {
 
     function getValue(uint256 id) public view returns (uint256) {
         return 0;
-    }
-
-    function setURI(string memory newuri) public onlyOwner {
-        _setURI(newuri);
     }
 }

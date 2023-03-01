@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -11,7 +13,7 @@ import "../../contracts/valuation/wrapper/DebtNFT.sol";
 import "../../contracts/connector/SushiswapConnector.sol";
 import "./Lending.sol";
 
-contract SimpleBorrower is IBorrowable {
+contract SimpleBorrower is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
     // UniConnector public uni;
     DebtNFT public debtNFT;
     Lending public lending;
@@ -20,8 +22,12 @@ contract SimpleBorrower is IBorrowable {
     BorrowCache public borrowCache;
     BorrowCache public repayCache;
 
-
-    constructor(address _lending, address _debtNFT, address _sushi) {
+    function initialize(
+        address _asset,
+        address _lending,
+        address _debtNFT,
+        address _sushi
+    ) public initContext(_asset) {
         lending = Lending(_lending);
         debtNFT = DebtNFT(_debtNFT);
         sushi = SushiswapConnector(_sushi);
@@ -35,19 +41,29 @@ contract SimpleBorrower is IBorrowable {
         uint256 debtAmount
     ) public {
         require(borrowCache.init == false, "already borrowed");
+        console.log("SimpleBorrower - borrow");
+        asset.safeTransferFrom(msgSender(), address(this), uint256(uint160(collateralAsset)), collateralAmount, "");
         borrowCache = BorrowCache(true, collateralAsset, collateralAmount, debtAsset, debtAmount);
-        uint256 id = lending.borrowAndCallback(debtAsset, debtAmount);
+        uint256 id = lending.borrowAndCallback(uint256(uint160(debtAsset)), debtAsset, debtAmount);
         console.log("borrowId", id);
+        asset.safeTransferFrom(address(this), msgSender(), id, 1, "");
+    }
+
+    function nextId() public returns (uint256) {
+        return 1;
     }
 
     function borrowCallback()
         public
         override
-        returns (uint256 tokenId, uint256 tokenAmount)
     {
         require(borrowCache.init == true, "not borrowed");
-        tokenId = uint256(uint160(borrowCache.collateralAsset));
-        tokenAmount = borrowCache.collateralAmount + borrowCache.debtAmount; 
+        uint256 tokenId = uint256(uint160(borrowCache.collateralAsset));
+        uint256 tokenAmount = borrowCache.collateralAmount + borrowCache.debtAmount;
+        asset.safeTransferFrom(address(this), msgSender(), tokenId, tokenAmount, "");
+        console.log("Borrower");
+        console.log("tokenId", tokenId);
+        console.log("tokenAmount", tokenAmount);
 
         borrowCache.init = false;
     }

@@ -70,14 +70,13 @@ contract Margin is IBorrowable, ERC1155, Ownable {
         require(borrowCache.init == false, "already borrowed");
         // borrowCache = BorrowCache(true, collateralAsset, debtAsset, collateralAmount, debtAmount);
 
-        lending.borrowAndCallback(debtAsset, debtAmount);
+        // lending.borrowAndCallback(debtAsset, debtAmount);
         // fpm.mint([address(uni)], [id], [1], [token0, token1], [debt0, debt1]);
     }
 
     function borrowCallback()
         public
         override
-        returns (uint256 tokenId, uint256 tokenAmount)
     {
         require(borrowCache.init == true, "not borrowed");
 
