@@ -13,6 +13,7 @@ import "../../interfaces/IWrapper.sol";
 import "../../interfaces/IAsset.sol";
 import "../utils/FactorialContext.sol";
 
+/// @dev This contract enables valuation by tokenizing all asset through wrapping.
 contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable, FactorialContext {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -30,6 +31,8 @@ contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable, Fac
     /// @dev required by the OZ UUPS module
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
+    /// @dev Initialize tokenization contract
+    /// @param _asset The factorial asset management contract
     function initialize(address _asset) external initializer initContext(_asset) {
         __Ownable_init();
     }

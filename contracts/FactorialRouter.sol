@@ -15,15 +15,19 @@ import "./valuation/Tokenization.sol";
 
 /// It route to application.
 contract FactorialRouter is OwnableUpgradeable {
+    /// ----- INIT STATES -----
     IAsset public asset;
 
+    /// @dev Initialize factorial router contract
+    /// @param _asset The factorial asset management contract
     function initialize(address _asset) external initializer {
         __Ownable_init();
         asset = IAsset(_asset);
     }
 
     /// @dev Call to the target using the given data.
-    /// @param _maximumLoss The maximum loss slippage
+    /// @param _maximumLoss The maximum loss slippage.
+    /// @param _target The target address to call.
     /// @param _data The data used in the call.
     function execute(uint256 _maximumLoss, address _target, bytes calldata _data) external {
         asset.beforeExecute(_maximumLoss, msg.sender);
