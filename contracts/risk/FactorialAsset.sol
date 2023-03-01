@@ -140,7 +140,7 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
                 return;
             } else if (_to == cache.caller || factorialModules[_to]) {
                 _burn(_from, _id, _amount);
-                IERC20Upgradeable(externalToken).safeTransferFrom(address(this), _to, _amount);
+                IERC20Upgradeable(externalToken).safeTransfer(_to, _amount);
                 return;
             }
         }
@@ -190,7 +190,7 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
                     _amounts[i] = 0;
                 } else if (_to == cache.caller || factorialModules[_to]) {
                     _burn(_from, id, amount);
-                    IERC20Upgradeable(externalToken).safeTransferFrom(address(this), _to, amount);
+                    IERC20Upgradeable(externalToken).safeTransfer(_to, amount);
                     _amounts[i] = 0;
                 }
             }
