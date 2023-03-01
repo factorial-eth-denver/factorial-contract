@@ -37,7 +37,7 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
         _;
     }
 
-    function initialize(address _tokenization, address _asset) public initializer initContext(_asset){
+    function initialize(address _tokenization, address _asset) public initializer initContext(_asset) {
         __Ownable_init();
         tokenization = ITokenization(_tokenization);
         sequentialN = 1;
@@ -105,5 +105,9 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
 
     function getTokenInfo(uint _tokenId) external view returns (uint[] memory tokens, uint[] memory amounts){
         return (tokenInfos[_tokenId].underlyingTokens, tokenInfos[_tokenId].underlyingAmounts);
+    }
+
+    function getNextTokenId(address _caller, uint24 _tokenType) public view override returns (uint) {
+        return (uint256(_tokenType) << 232) + (sequentialN << 160) + uint256(uint160(_caller));
     }
 }

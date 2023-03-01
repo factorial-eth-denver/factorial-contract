@@ -37,7 +37,6 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
     mapping(uint256 => address) public ownerOf;
     address public router;
 
-
     /// @dev Throws if called by not factorial module.
     modifier onlyFactorialModule() {
         require(factorialModules[_msgSender()], 'Only factorial module');

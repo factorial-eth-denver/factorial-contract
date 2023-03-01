@@ -89,4 +89,8 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
         }
         return collateralValue - (debtTokenType * debtAmount);
     }
+
+    function getNextTokenId(address _caller, uint24 _tokenType) public view override returns (uint) {
+        return (uint256(_tokenType) << 232) + (sequentialN << 160) + uint256(uint160(_caller));
+    }
 }
