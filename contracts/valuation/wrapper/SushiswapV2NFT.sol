@@ -33,11 +33,11 @@ contract SushiswapV2NFT is OwnableUpgradeable, IWrapper {
         _;
     }
 
-    function initialize(address _tokenization, address _farm, address _sushi) public initializer {
+    function initialize(address _tokenization, address _farm) public initializer {
         __Ownable_init();
         tokenization = ITokenization(_tokenization);
         farm = IMasterChef(_farm);
-        sushi = IERC20Upgradeable(_sushi);
+        sushi = IERC20Upgradeable(farm.sushi());
     }
 
     function wrap(address, uint24, bytes calldata) external pure override returns (uint) {
@@ -59,5 +59,9 @@ contract SushiswapV2NFT is OwnableUpgradeable, IWrapper {
         uint px0 = tokenization.getValue(uint256(uint160(token0)), 1e18);
         uint px1 = tokenization.getValue(uint256(uint160(token1)), 1e18);
         return sqrtK * 2 * (px0.sqrt()) / (2 ** 56) * (px1.sqrt()) / (2 ** 56) * amount;
+    }
+
+    function getNextTokenId(address, uint24) public pure override returns (uint) {
+        revert('Not supported');
     }
 }

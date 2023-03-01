@@ -41,4 +41,8 @@ contract UniswapV2FT is OwnableUpgradeable, IWrapper {
         uint px1 = tokenization.getValue(uint256(uint160(token1)), 1e18);
         return sqrtK * 2 * (px0.sqrt()) / (2 ** 56) * (px1.sqrt()) / (2 ** 56) * amount;
     }
+
+    function getNextTokenId(address, uint24) public pure override returns (uint) {
+        revert('Not supported');
+    }
 }
