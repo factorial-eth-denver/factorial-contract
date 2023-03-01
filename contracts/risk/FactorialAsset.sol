@@ -215,7 +215,7 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
                 return IERC20Upgradeable(id.toAddress()).balanceOf(account);
             }
         }
-        return balanceOf(account, id);
+        return super.balanceOf(account, id);
     }
 
     function _afterTokenTransfer(
