@@ -1,7 +1,9 @@
 import {ethers} from 'hardhat';
 import {
     DebtNFT,
-    ERC20Asset, FactorialAsset, FactorialRouter,
+    ERC20Asset,
+    AssetManagement,
+    FactorialRouter,
     MockERC20,
     OracleRouter,
     SyntheticFT,
@@ -18,7 +20,7 @@ describe('SyntheticNFT wrapper unit test', () => {
     let usdc: MockERC20
     let oracleRouter: OracleRouter
     let router: FactorialRouter
-    let asset: FactorialAsset
+    let asset: AssetManagement
     let tokenization: Tokenization
     let debtNFT: DebtNFT
     let erc20Asset: ERC20Asset
