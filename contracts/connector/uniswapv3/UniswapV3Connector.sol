@@ -41,7 +41,6 @@ contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, Factori
     uint public wrapperTokenType;
     mapping(uint24 => uint256) public connectionBitMap;
 
-    // Cache
     struct VariableCache {
         address currentSwapPool;
         uint256 token0;

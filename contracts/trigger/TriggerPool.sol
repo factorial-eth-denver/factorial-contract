@@ -14,6 +14,7 @@ import "./library/TriggerBitmap.sol";
 contract TriggerPool is AutomationCompatible {
     using TriggerBitmap for mapping(uint256 => uint256);
 
+    /// ----- CONSTANTS -----
     uint8 internal constant SKIP = 0;
     uint8 internal constant PERFORM = 1;
     uint8 internal constant CANCEL = 2;
@@ -25,11 +26,15 @@ contract TriggerPool is AutomationCompatible {
         bytes performData;
     }
 
-    mapping(uint256 => uint256) public triggerBitmap;
+    /// ----- VARIABLE STATES -----
     mapping(uint256 => TriggerInfo) public triggerInfos;
+    mapping(uint256 => uint256) public triggerBitmap;
 
+    /// ----- INIT STATES -----
     Tokenization public tokenization;
     IAsset public asset;
+
+    /// ----- SETTING STATES -----
     uint256 public maxPage;
     uint256 public triggerCountPerPage;
 
@@ -38,6 +43,7 @@ contract TriggerPool is AutomationCompatible {
         asset = IAsset(_asset);
     }
 
+    /// @dev Register trigger order
     function registerTrigger(
         address checkModule,
         bytes calldata checkData,

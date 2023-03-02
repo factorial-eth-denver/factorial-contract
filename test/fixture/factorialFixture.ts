@@ -45,7 +45,6 @@ const factorialFixture: Fixture<{
     const TokenizationFactory = await ethers.getContractFactory('Tokenization');
     const DebtNFTFactory = await ethers.getContractFactory('DebtNFT');
     const ERC20AssetFactory = await ethers.getContractFactory('ERC20Asset');
-    const SushiswapV2NFTFactory = await ethers.getContractFactory('SushiswapV2NFT');
     const SyntheticFTFactory = await ethers.getContractFactory('SyntheticFT');
     const SyntheticNFTFactory = await ethers.getContractFactory('SyntheticNFT');
     const testHelperFactory = await ethers.getContractFactory('TestHelper');
@@ -61,7 +60,6 @@ const factorialFixture: Fixture<{
     const erc20Asset = await ERC20AssetFactory.deploy() as ERC20Asset;
     const syntheticFT = await SyntheticFTFactory.deploy() as SyntheticFT;
     const syntheticNFT = await SyntheticNFTFactory.deploy() as SyntheticNFT;
-    const sushiNFT = await SyntheticNFTFactory.deploy() as SushiswapV2NFT;
     const helper = await testHelperFactory.deploy() as TestHelper;
 
     await router.initialize(asset.address);
@@ -73,7 +71,6 @@ const factorialFixture: Fixture<{
     await debtNFT.initialize(tokenization.address, asset.address);
     await syntheticFT.initialize(tokenization.address, asset.address);
     await syntheticNFT.initialize(tokenization.address, asset.address);
-    // await sushiNFT.initialize(tokenization.address, farm);
 
     await oracleRouter.setRoute(
         [usdc.address, weth.address],
