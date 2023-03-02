@@ -43,12 +43,14 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         address _asset,
         address _connectionPool,
         address _masterChef,
+        address _sushiRouter,
         uint _wrapperTokenType
     ) public initializer initContext(_asset) {
         __Ownable_init();
         tokenization = ITokenization(_tokenization);
         connectionPool = IConnectionPool(_connectionPool);
         masterChef = IMasterChef(_masterChef);
+        sushiRouter = IUniswapV2Router(_sushiRouter);
         sushi = IERC20Upgradeable(masterChef.sushi());
         wrapperTokenType = _wrapperTokenType;
     }
@@ -58,7 +60,9 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         asset.safeTransferFrom(msgSender(), address(this), _yourToken, balance, '');
         address[] memory path = new address[](2);
         (path[0], path[1]) = (_yourToken.toAddress(), _wantToken.toAddress());
+        IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), type(uint128).max);
         sushiRouter.swapTokensForExactTokens(_amount, balance, path, address(this), block.timestamp);
+        IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), 0);
         uint left = asset.balanceOf(address(this), _yourToken);
         asset.safeTransferFrom(address(this), msgSender(), _yourToken, left, '');
     }
@@ -66,8 +70,10 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
     function sell(uint _yourToken, uint _wantToken, uint _amount, uint24) external override {
         asset.safeTransferFrom(msgSender(), address(this), _yourToken, _amount, '');
         address[] memory path = new address[](2);
+        IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), _amount);
         (path[0], path[1]) = (_yourToken.toAddress(), _wantToken.toAddress());
         sushiRouter.swapExactTokensForTokens(_amount, 1, path, address(this), block.timestamp);
+        IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), 0);
     }
 
     function mint(uint[] calldata _tokens, uint[] calldata _amounts) external override returns (uint) {

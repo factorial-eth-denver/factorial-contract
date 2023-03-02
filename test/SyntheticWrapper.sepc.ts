@@ -56,6 +56,10 @@ describe('SyntheticNFT wrapper unit test', () => {
 
             let wrapCallData = tokenization.interface.encodeFunctionData("wrap",
                 [SYNTHETIC_NFT_TOKEN_TYPE, wrapParam])
+            console.log(await usdc.balanceOf(user1.address));
+            console.log(await usdc.allowance(user1.address, asset.address));
+            console.log(await weth.balanceOf(user1.address));
+            console.log(await weth.allowance(user1.address, asset.address));
             await router.execute(1000000, tokenization.address, wrapCallData);
         })
 

@@ -77,15 +77,14 @@ const factorialFixture: Fixture<{
         [simplePriceOracle.address, simplePriceOracle.address]
     );
 
-    await weth.mint(deployer.address, "10000000000000000000000000");
-    await weth.mint(user1.address, "10000000000000000000000000");
+    await weth.mint(deployer.address, "100000000000000000000000000");
+    await weth.mint(user1.address, "100000000000000000000000000");
 
-    await usdc.mint(deployer.address, "10000000000000000000000000");
-    await usdc.mint(user1.address, "10000000000000000000000000");
+    await usdc.mint(deployer.address, "100000000000000000000000000");
+    await usdc.mint(user1.address, "100000000000000000000000000");
 
-    await weth.approve(asset.address, "10000000000000000000000000");
-    await usdc.approve(asset.address, "10000000000000000000000000");
-
+    await weth.approve(asset.address, "1000000000000000000000000000000");
+    await usdc.approve(asset.address, "10000000000000000000000000000000");
     await simplePriceOracle.setPrice(weth.address, '2000');
     await simplePriceOracle.setPrice(usdc.address, '1000000000000');
 
