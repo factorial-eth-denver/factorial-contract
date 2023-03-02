@@ -37,27 +37,33 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
         _;
     }
 
+    /// @dev Initialize Synthetic FT contract
+    /// @param _tokenization The factorial tokenization module address.
+    /// @param _asset The factorial asset management module address
     function initialize(address _tokenization, address _asset) public initializer initContext(_asset) {
         __Ownable_init();
         tokenization = ITokenization(_tokenization);
         sequentialN = 1;
     }
 
+    /// @dev Wrap multi token to FT.
+    /// @param _caller The caller of wrapping. It is same of tokenization module's msg.sender.
+    /// @param _tokenType The 24-bit token type.
+    /// @param _param The encoded calldata.
     function wrap(
         address _caller,
         uint24 _tokenType,
         bytes calldata _param
     ) external override onlyTokenization returns (uint tokenId){
+        // 0. Decode parameters
         (uint256[] memory tokens, uint256[] memory amounts, uint256 _sequentialN, uint256 mintAmount)
         = abi.decode(_param, (uint256[], uint256[], uint256, uint256));
 
-        if (_sequentialN == 0) {
-            tokenId = (uint256(_tokenType) << 232) + (sequentialN++ << 160) + uint256(uint160(_caller));
-        } else {
-            tokenId = (uint256(_tokenType) << 232) + (_sequentialN << 160) + uint256(uint160(_caller));
-        }
+        // 1. Get token id
+        if (_sequentialN == 0) _sequentialN = sequentialN++;
+        tokenId = (uint256(_tokenType) << 232) + (_sequentialN << 160) + uint256(uint160(_caller));
 
-        // Store states
+        // 2. Store states
         SynthFT storage ft = tokenInfos[tokenId];
         ft.totalSupply += mintAmount;
         for (uint i = 0; i < tokens.length; i ++) {
@@ -70,27 +76,40 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
             }
         }
 
-        // Mint token to user
+        // 3. Mint token to user
         asset.safeBatchTransferFrom(_caller, address(this), tokens, amounts, '');
         asset.mint(_caller, tokenId, mintAmount);
 
+        // 4. Return token id
         return tokenId;
     }
 
+    /// @dev Unwrap FT to multi asset.
+    /// @param _caller The caller of unwrapping. It is same of tokenization module's msg.sender.
+    /// @param _tokenId The token id to unwrap.
+    /// @param _amount The amount of unwrap.
     function unwrap(address _caller, uint _tokenId, uint _amount) external override onlyTokenization {
+        // 0. Calculate portion of underlying asset
         SynthFT memory ft = tokenInfos[_tokenId];
         uint256[] memory amounts = new uint256[](ft.underlyingAmounts.length);
         for (uint i = 0; i < amounts.length; i++) {
             amounts[i] = ft.underlyingAmounts[i] * _amount / ft.totalSupply;
             ft.underlyingAmounts[i] -= amounts[i];
         }
-        asset.safeBatchTransferFrom(address(this), _caller, ft.underlyingTokens, amounts, '');
-        asset.burn(_caller, _tokenId, _amount);
         ft.totalSupply -= _amount;
 
+        // 1. Burn wrapping token & Transfer underlying assets to caller.
+        asset.burn(_caller, _tokenId, _amount);
+        asset.safeBatchTransferFrom(address(this), _caller, ft.underlyingTokens, amounts, '');
+
+        // 2. Store states
         tokenInfos[_tokenId] = ft;
     }
 
+    /// ----- VIEW FUNCTIONS -----
+    /// @dev Return value of token by id and amount.
+    /// @param _tokenId The token ID to be valued.
+    /// @param _amount The amount of token to be valued.
     function getValue(uint _tokenId, uint _amount) public view override returns (uint){
         SynthFT memory token = tokenInfos[_tokenId];
         uint totalValue = 0;
@@ -100,6 +119,10 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
         return totalValue * _amount / token.totalSupply;
     }
 
+    /// @dev Return token value as collateral. For debt token wrapper.
+    /// @param _lendingProtocol The lending protocol address. This is for using custom factor.
+    /// @param _tokenId The token ID to be valued.
+    /// @param _amount The amount of token to be valued.
     function getValueAsCollateral(
         address _lendingProtocol,
         uint _tokenId,
@@ -117,6 +140,10 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
         return totalValue * _amount / token.totalSupply;
     }
 
+    /// @dev Return token value as debt. For debt token wrapper.
+    /// @param _lendingProtocol The lending protocol address. This is for using custom factor.
+    /// @param _tokenId The token ID to be valued.
+    /// @param _amount The amount of token to be valued. If NFT token, it should be 1.
     function getValueAsDebt(
         address _lendingProtocol,
         uint _tokenId,
