@@ -16,18 +16,23 @@ contract UniswapV2Oracle is IPriceOracle {
 
     using MathUpgradeable for uint256;
 
-    function getPrice(address) external pure returns (uint price) {
-        return 0;
+    /// ----- ADMIN FUNCTIONS -----
+    /// @dev Get token price using oracle.
+    function getPrice(address) external pure returns (uint) {
+        revert("Not supported");
     }
 
-    function getPrice(address token, address pair) external view returns (uint) {
-        (uint rA, uint rB,) = IUniswapV2Pair(pair).getReserves();
-        address tokenA = IUniswapV2Pair(pair).token0();
-        address tokenB = IUniswapV2Pair(pair).token1();
+    /// @dev Get token price using oracle.
+    /// @param _token Token address to get price.
+    /// @param _pair Source pool address
+    function getPrice(address _token, address _pair) external view returns (uint) {
+        (uint rA, uint rB,) = IUniswapV2Pair(_pair).getReserves();
+        address tokenA = IUniswapV2Pair(_pair).token0();
+        address tokenB = IUniswapV2Pair(_pair).token1();
 
-        uint decimals = IERC20Ex(token).decimals();
+        uint decimals = IERC20Ex(_token).decimals();
 
-        if (tokenA == token) {
+        if (tokenA == _token) {
             if (decimals > 18) {
                 rB = rB * (10 ** (decimals - 18));
             } else {
