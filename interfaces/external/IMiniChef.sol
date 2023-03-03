@@ -1,22 +1,23 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-interface IMasterChef {
+interface IMiniChef {
     function sushi() external view returns (address);
 
     function poolInfo(uint pid)
     external
     view
     returns (
-        address lpToken,
         uint allocPoint,
-        uint lastRewardBlock,
+        uint lastRewardTime,
         uint accSushiPerShare
     );
 
-    function deposit(uint pid, uint amount) external;
+    function lpToken(uint pid) external view returns(address);
 
-    function withdraw(uint pid, uint amount) external;
+    function deposit(uint pid, uint amount, address to) external;
+
+    function withdraw(uint pid, uint amount, address to) external;
 
     function userInfo(uint pid, address user) external view returns (uint amount, uint rewardDebt);
 }

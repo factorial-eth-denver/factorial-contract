@@ -11,14 +11,14 @@ import "../../../interfaces/IWrapper.sol";
 import "../../../interfaces/IPriceOracle.sol";
 
 import "../../../interfaces/external/IUniswapV2Pair.sol";
-import "../../../interfaces/external/IMasterChef.sol";
+import "../../../interfaces/external/IMiniChef.sol";
 
 contract SushiswapV2NFT is OwnableUpgradeable, IWrapper {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using MathUpgradeable for uint256;
 
     ITokenization public tokenization;
-    IMasterChef public farm;
+    IMiniChef public farm;
     IERC20Upgradeable public sushi;
     uint256 private sequentialN;
 
@@ -31,7 +31,7 @@ contract SushiswapV2NFT is OwnableUpgradeable, IWrapper {
     function initialize(address _tokenization, address _farm) public initializer {
         __Ownable_init();
         tokenization = ITokenization(_tokenization);
-        farm = IMasterChef(_farm);
+        farm = IMiniChef(_farm);
         sushi = IERC20Upgradeable(farm.sushi());
     }
 
@@ -46,7 +46,7 @@ contract SushiswapV2NFT is OwnableUpgradeable, IWrapper {
     function getValue(uint256 tokenId, uint256 amount) public view override returns (uint){
         require(false, "1");
         uint poolId = uint256(uint80(tokenId));
-        (address lpToken, , ,) = farm.poolInfo(poolId);
+        address lpToken = farm.lpToken(poolId);
         address token0 = IUniswapV2Pair(lpToken).token0();
         address token1 = IUniswapV2Pair(lpToken).token1();
         uint totalSupply = IUniswapV2Pair(lpToken).totalSupply();

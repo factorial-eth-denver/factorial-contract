@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "../../interfaces/external/IMasterChef.sol";
+import "../../interfaces/external/IMiniChef.sol";
 import "../../interfaces/IConnection.sol";
 import "../../interfaces/IConnectionPool.sol";
 
