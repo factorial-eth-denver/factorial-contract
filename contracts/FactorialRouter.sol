@@ -41,7 +41,7 @@ contract FactorialRouter is OwnableUpgradeable {
     /// @param _dataArray The data array used in the call.
     function executeBatch(uint256 _maximumLoss, address[] calldata _targetArray, bytes[] calldata _dataArray) external {
         asset.beforeExecute(_maximumLoss, msg.sender);
-        for (uint256 idx = 0; idx < _dataArray.length; idx ++) {
+        for (uint256 idx = 0; idx < _dataArray.length; ++idx) {
             executeInternal(_targetArray[idx], _dataArray[idx]);
         }
         asset.afterExecute();
