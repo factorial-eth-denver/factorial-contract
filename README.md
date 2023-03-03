@@ -6,7 +6,7 @@ Easy to Build, Hard to Rug.
 ## Overview
 
 This repository is for ETHDenver2023 BUIDLathon.
-We provide contracts, tests, and deployment scripts.
+We provide contracts and deployment scripts.
 
 ### Depolyment and Test
 
