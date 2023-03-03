@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 
 import "../../../interfaces/external/IUniswapV2Factory.sol";
 import "../../../interfaces/external/IUniswapV2Router.sol";
+import "../../../interfaces/external/IUniswapV2Pair.sol";
 import "../../../interfaces/external/IMasterChef.sol";
 import "../../../interfaces/IConnection.sol";
 import "../../../interfaces/IConnectionPool.sol";
@@ -17,12 +18,14 @@ import "../../../interfaces/ISwapConnector.sol";
 
 import "../library/ConnectionBitmap.sol";
 import "../library/SafeCastUint256.sol";
+import "../library/Math.sol";
 import "../../utils/FactorialContext.sol";
 
 contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable, UUPSUpgradeable, FactorialContext {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeCastUint256 for uint;
     using ConnectionBitmap for mapping(uint24 => uint256);
+    using Math for uint256;
 
     ITokenization public tokenization;
     IConnectionPool public connectionPool;
@@ -204,5 +207,54 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         uint24 connectionId = connectionBitMap.findFirstEmptySpace(connectionPool.getConnectionMax() / 256);
         connectionBitMap.occupy(connectionId);
         return connectionId;
+    }
+
+    function getReserves(uint _tokenA, uint _tokenB) public returns (uint, uint){
+        (uint112 reserveA, uint112 reserveB,) = IUniswapV2Pair(getLP(_tokenA, _tokenB).toAddress()).getReserves();
+        return (uint256(reserveA), uint256(reserveB));
+    }
+
+    function optiamlSwapAmount(
+        uint tokenA,
+        uint tokenB,
+        uint amountA,
+        uint amountB
+    ) external returns (uint swapAmt, bool isReversed) {
+        (uint reserveA, uint reserveB) = getReserves(tokenA, tokenB);
+        return optimalDeposit(amountA, amountB, reserveA, reserveB);
+    }
+
+    function optimalDeposit(
+        uint amtA,
+        uint amtB,
+        uint resA,
+        uint resB
+    ) internal pure returns (uint swapAmt, bool isReversed) {
+        if (amtA * resB >= amtB * resA) {
+            swapAmt = _optimalDepositA(amtA, amtB, resA, resB);
+            isReversed = false;
+        } else {
+            swapAmt = _optimalDepositA(amtB, amtA, resB, resA);
+            isReversed = true;
+        }
+    }
+
+    /// Formula: https://blog.alphafinance.io/byot/
+    function _optimalDepositA(
+        uint amtA,
+        uint amtB,
+        uint resA,
+        uint resB
+    ) internal pure returns (uint) {
+        require(amtA * resB >= amtB * resA, 'Reversed');
+        uint a = 997;
+        uint b = uint(1997) * resA;
+        uint _c = (amtA * resB) - (amtB * resA);
+        uint c = (_c * 1000) / (amtB + resB) * resA;
+        uint d = a * c * 4;
+        uint e = Math.sqrt(b * b + d);
+        uint numerator = e - b;
+        uint denominator = a * 2;
+        return numerator / denominator;
     }
 }
