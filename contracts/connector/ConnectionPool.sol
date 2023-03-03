@@ -22,12 +22,10 @@ contract ConnectionPool is IConnectionPool, OwnableUpgradeable {
     uint256 public lastConnectorId;
     mapping(address => uint256) public connectors;
     mapping(uint256 => address) public connections;
-    address public connectionImpl;
 
     function initialize(address _asset) external initializer{
         __Ownable_init();
         asset = IAsset(_asset);
-        connectionImpl = address(new Connection());
     }
 
     /// @dev Register connector.
@@ -42,7 +40,7 @@ contract ConnectionPool is IConnectionPool, OwnableUpgradeable {
         require(n <= 20, 'Over gas limit');
         require(n >= 1, 'Under minimum');
         while (n > 0) {
-            connections[nextConnectionId] = connectionImpl.clone();
+            connections[nextConnectionId] = address(new Connection());
             param[n-1] = connections[nextConnectionId];
             nextConnectionId ++;
             n --;

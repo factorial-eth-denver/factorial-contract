@@ -17,11 +17,6 @@ contract SushiswapV2NFT is OwnableUpgradeable, IWrapper {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using MathUpgradeable for uint256;
 
-    struct SushiFarmingNFT {
-        uint poolId;
-    }
-
-    mapping(uint256 => SushiFarmingNFT) private tokenInfos;
     ITokenization public tokenization;
     IMasterChef public farm;
     IERC20Upgradeable public sushi;
@@ -49,8 +44,9 @@ contract SushiswapV2NFT is OwnableUpgradeable, IWrapper {
     }
 
     function getValue(uint256 tokenId, uint256 amount) public view override returns (uint){
-        SushiFarmingNFT memory token = tokenInfos[tokenId];
-        (address lpToken, , ,) = farm.poolInfo(token.poolId);
+        require(false, "1");
+        uint poolId = uint256(uint80(tokenId));
+        (address lpToken, , ,) = farm.poolInfo(poolId);
         address token0 = IUniswapV2Pair(lpToken).token0();
         address token1 = IUniswapV2Pair(lpToken).token1();
         uint totalSupply = IUniswapV2Pair(lpToken).totalSupply();

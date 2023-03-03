@@ -1,6 +1,6 @@
 import {ethers} from 'hardhat';
 import {
-    AssetManagement, ConnectionPool,
+    AssetManagement, Connection__factory, ConnectionPool,
     DebtNFT,
     ERC20Asset, FactorialRouter,
     MockERC20, MockOldERC20, MockSushi,
@@ -28,6 +28,7 @@ describe('Sushiswap Connector unit test', () => {
     let connectionPool: ConnectionPool
     let helper: TestHelper
     let sushiConnector: SushiswapConnector
+    let mockSushi: MockSushi
 
     before('load fixture', async () => {
         ({
@@ -43,6 +44,7 @@ describe('Sushiswap Connector unit test', () => {
             syntheticNFT,
             connectionPool,
             sushiConnector,
+            mockSushi,
             helper
         } = await loadFixture(factorialFixture));
 
@@ -67,14 +69,23 @@ describe('Sushiswap Connector unit test', () => {
             await router.execute(MaxUint128, sushiConnector.address, sellCalldata);
         })
 
-
-        it('#1-3 sell success test', async () => {
-            let [user1] = await ethers.getSigners();
-            let usdcId = await helper.convertAddressToId(usdc.address);
-            let wethId = await helper.convertAddressToId(weth.address);
-            let sellCalldata = sushiConnector.interface.encodeFunctionData("depositNew",
-                [usdcId, 1000000])
-            await router.execute(MaxUint128, sushiConnector.address, sellCalldata);
+        it('#1-3 deposit success test', async () => {
+            let mintCalldata = sushiConnector.interface.encodeFunctionData("depositNew",
+                [10, 1000000])
+            await router.execute("1000000000000000000000", sushiConnector.address, mintCalldata);
         })
+        //
+        // it('#1-3 dpeosit success test', async () => {
+        //     let [user1] = await ethers.getSigners();
+        //     let connectionAddress = await connectionPool.connections(0);
+        //     let connection = await Connection__factory.connect(connectionAddress, user1);
+        //     let sellCalldata = sushiConnector.interface.encodeFunctionData("depositNew",
+        //         [10, 1000000])
+        //     let mintCalldata = sushiConnector.interface.encodeFunctionData("deposit",
+        //         [10, 1000000, asset.address, mockSushi.address, await mockSushi.sushi(), user1.address])
+        //     //console.log(connection.address);
+        //     await connection.execute(sushiConnector.address, mintCalldata);
+        //     //deposit(uint _pid, uint _amount, address _asset, address _masterChef, address _sushi, address _caller)
+        // })
     })
 })

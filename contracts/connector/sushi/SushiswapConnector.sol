@@ -121,14 +121,13 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         return (amountA, amountB);
     }
 
-    function depositNew(uint _pid, uint _amount) external override returns (uint){
+    function depositNew(uint256 _pid, uint256 _amount) external override returns (uint){
         uint24 connectionId = occupyConnection();
         address connection = connectionPool.getConnectionAddress(connectionId);
         bytes memory callData = abi.encodeWithSignature(
             "deposit(uint256,uint256,address,address,address,address)",
             _pid, _amount, address(asset), address(masterChef), address(sushi), msgSender()
         );
-        console.log(connection);
         IConnection(connection).execute(address(this), callData);
         uint tokenId = (wrapperTokenType << 232) + (uint256(connectionId) << 80) + (_pid);
         asset.mint(msgSender(), tokenId, 1);
