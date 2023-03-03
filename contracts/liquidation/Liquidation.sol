@@ -1,50 +1,72 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "../valuation/Tokenization.sol";
 import "../valuation/wrapper/DebtNFT.sol";
 import "../../interfaces/ILiquidationModule.sol";
 import "../../interfaces/ILending.sol";
 import "../../interfaces/IAsset.sol";
+import "../../interfaces/IRepayable.sol";
 
-contract Liquidation {
+
+import "hardhat/console.sol";
+
+contract Liquidation is IRepayable, OwnableUpgradeable, FactorialContext, ERC1155HolderUpgradeable {
     Tokenization public tokenization;
     DebtNFT public debtNFT;
     address public trigger;
-    IAsset public asset;
+
+    RepayCache public repayCache;
 
     mapping(address => ILiquidationModule) public modules;
 
-    constructor(
+    function initialize(
         address _tokenization,
         address _debtNFT,
         address _trigger,
         address _factorialAsset
-    ) {
+    ) initializer initContext(_factorialAsset) public {
+        __Ownable_init();
         tokenization = Tokenization(_tokenization);
         debtNFT = DebtNFT(_debtNFT);
         trigger = _trigger;
         asset = IAsset(_factorialAsset);
     }
 
+    function addModules(address[] calldata liquidationModules) public onlyOwner {
+        for (uint256 i = 0; i < liquidationModules.length; i++) {
+            modules[liquidationModules[i]] = ILiquidationModule(
+                liquidationModules[i]
+            );
+        }
+    }
+
     function execute(
         address liquidationModule,
+        uint256 tokenId,
         bytes calldata data
     ) public onlyTrigger {
+        console.log("Liquidation - execute");
         require(
             address(modules[liquidationModule]) != address(0),
             "Not registered"
         );
-        //  = tokenization.ownerOf(positionId);
-        // 만들어야 할것 Take Dept Position
+
+        address owner = asset.ownerOf(tokenId);
+        asset.safeTransferFrom(
+            owner,
+            address(this),
+            tokenId,
+            1,
+            ""
+        );
 
         ILiquidationModule module = modules[liquidationModule];
-        address liquidator = msg.sender;
-        module.execute(liquidator, data); //[수정]
-
-        // ILending lending = ILending(address(uint160(positionId)));
-        // deptNFT.transferFrom(liquidator, address(this), positionId);
+        address liquidator = asset.caller();
+        module.execute(liquidator, tokenId, data); //[수정]
     }
 
     function liquidate(
@@ -54,24 +76,48 @@ contract Liquidation {
         address[] calldata outAccounts,
         uint256[] calldata outAmounts
     ) public onlyLiquidationModule {
-        (uint256 collateralToken, uint256 collateralAmount, ) = debtNFT
-            .tokenInfos(positionId);
-
+        require(repayCache.init == false, "already repaying");
         ILending lending = ILending(address(uint160(positionId)));
-        ILending.BorrowInfo memory borrowInfo = lending.getBorrowInfo(
-            positionId
+        uint256 collateralToken;
+        uint256 debtToken;
+        {
+            uint256 _positionId = positionId;
+            uint256 collateralAmount;
+            (
+                collateralToken,
+                collateralAmount,
+            ) = debtNFT.tokenInfos(_positionId);
+
+            (uint256 debtAsset, uint256 debtAmount) = lending.getDebt(_positionId);
+            debtToken = debtAsset;
+            repayCache = RepayCache(
+                true,
+                collateralToken,
+                collateralAmount,
+                debtToken,
+                debtAmount
+            );
+        }
+        
+        asset.safeTransferFrom(
+            address(this),
+            address(lending),
+            positionId,
+            1,
+            ""
         );
+
         for (uint256 i = 0; i < inAccounts.length; i++) {
             asset.safeTransferFrom(
                 inAccounts[i],
                 address(this),
-                uint256(uint160(borrowInfo.debtAsset)),
+                debtToken,
                 inAmounts[i],
                 ""
             );
         }
 
-        lending.liquidate(positionId);
+        lending.repayAndCallback(positionId);
 
         for (uint256 i = 0; i < outAccounts.length; i++) {
             asset.safeTransferFrom(
@@ -82,6 +128,19 @@ contract Liquidation {
                 ""
             );
         }
+        repayCache = RepayCache(false, 0, 0, 0, 0);
+    }
+
+    function repayCallback() public {
+        require(repayCache.init == true, "not repaying");
+        
+        asset.safeTransferFrom(
+            address(this),
+            msg.sender,
+            uint256(uint160(repayCache.debtAsset)),
+            repayCache.debtAmount,
+            ""
+        );
     }
 
     modifier onlyTrigger() {

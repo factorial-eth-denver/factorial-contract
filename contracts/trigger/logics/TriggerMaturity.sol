@@ -13,10 +13,8 @@ contract TriggerLogicMaturity is ITriggerLogic {
     }
 
     function check(
-        uint256 initialValue,
-        uint256 currentValue,
         bytes calldata _maturityParams
-    ) external override returns (bool) {
+    ) external override view returns (bool) {
         MaturityParams memory params = abi.decode(
             _maturityParams,
             (MaturityParams)

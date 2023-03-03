@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-interface IBorrowable {
+interface IRepayable {
 
-    struct BorrowCache {
+    struct RepayCache {
         bool init;
         uint256 collateralAsset;
         uint256 collateralAmount;
@@ -11,7 +11,6 @@ interface IBorrowable {
         uint256 debtAmount;
     }
 
-    function borrowCallback() external;
 
     function repayCallback() external;
 }
