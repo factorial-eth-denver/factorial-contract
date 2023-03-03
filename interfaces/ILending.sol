@@ -16,5 +16,7 @@ interface ILending {
 
     function calcFee(uint256 _id) external view returns (uint256);
 
+    function repayAndCallback(uint256 _debtId) external;
+
     function liquidate(uint256 _deptId) external;
 }
