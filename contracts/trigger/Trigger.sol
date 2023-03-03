@@ -96,7 +96,6 @@ contract Trigger is AutomationCompatible, OwnableUpgradeable, FactorialContext {
         emit CancelTrigger(triggerId);
     }
 
-    // perform에서 에러뜨면 이거 실행 더이상 안되야되는데 체링이 해줄수있나?
     function checkUpkeep(bytes calldata _checkData) external view returns (bool upkeepNeeded, bytes memory performData) {
         (uint256 checkPage) = abi.decode(_checkData, (uint256));
         upkeepNeeded = false;

@@ -17,22 +17,16 @@ contract TriggerLogicLiquidate is ITriggerLogic {
         debtNFT = DebtNFT(_debtNFT);
     }
 
-    struct LiquidateParams {
-        uint256 tokenId;
-        uint256 tokenAmount;
-        uint256 stopLoss;
-        address lending;
-    }
 
     function check(
         bytes calldata _liquidateParams
     ) external override view returns (bool) {
-        LiquidateParams memory params = abi.decode(
+        (uint256 tokenId, uint256 tokenAmount, uint256 stopLoss, address lending) = abi.decode(
             _liquidateParams,
-            (LiquidateParams)
+            (uint256, uint256, uint256, address)
         );
-        uint256 currentValue = debtNFT.getValueAsCollateral(params.lending, params.tokenId, params.tokenAmount);
 
-        return currentValue <= params.stopLoss;
+        uint256 valueWithFactor = debtNFT.getValueWithFactor(lending, tokenId, tokenAmount);
+        return valueWithFactor == 0;
     }
 }

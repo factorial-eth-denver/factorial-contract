@@ -1,156 +1,104 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "../../interfaces/IBorrowable.sol";
-import "../../contracts/valuation/wrapper/DebtNFT.sol";
 import "./Lending.sol";
+import "../connector/sushi/SushiswapConnector.sol";
+import "../valuation/Tokenization.sol";
+import "../../interfaces/IBorrowable.sol";
+import "../../contracts/valuation/wrapper/SyntheticNFT.sol";
+import "../../contracts/valuation/wrapper/DebtNFT.sol";
 
-contract Margin is IBorrowable, ERC1155, Ownable {
-    // UniConnector public uni;
+contract Margin is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
     DebtNFT public debtNFT;
     Lending public lending;
+    SushiswapConnector public sushi;
 
     BorrowCache public borrowCache;
-    RepayCache public repayCache;
+    BorrowCache public repayCache;
 
-    uint256 public sushiPoolId = 1;
-    mapping(uint256 => SushiPool) public sushiPools;
-    mapping(address => mapping(address => uint256)) public tokenToPool;
-    mapping(uint256 => uint256) public lpToPool;
-
-    struct SushiPool {
-        uint256 pid;
-        address token0;
-        address token1;
-        address lp;
-    }
-
-    struct RepayCache {
+    struct BorrowCache {
         bool init;
-        uint256 debtAsset;
-        uint256 debtAmount;
         uint256 collateralAsset;
         uint256 collateralAmount;
+        uint256 debtAsset;
+        uint256 debtAmount;
     }
 
-    constructor(address _fpm, address _uni, address _lending) ERC1155("") {
-        // uni = UniConnector(_uni);
+    function initialize(
+        address _asset,
+        address _lending,
+        address _deptNFT,
+        address _sushi
+    ) public initContext(_asset) {
         lending = Lending(_lending);
-    }
-
-    function _checkAndCreateSushiPool(
-        address token0,
-        address token1,
-        address lp,
-        uint256 pid
-    ) internal {
-        if (tokenToPool[token0][token1] != 0) return;
-
-        sushiPools[sushiPoolId] = SushiPool(pid, token0, token1, lp);
-        tokenToPool[token0][token1] = sushiPoolId;
-        tokenToPool[token1][token0] = sushiPoolId;
-        lpToPool[pid] = sushiPoolId;
-
-        sushiPoolId++;
+        debtNFT = DebtNFT(_deptNFT);
+        sushi = SushiswapConnector(_sushi);
     }
 
     // 깊은게 아니라 단순 토큰0을 담보로 토큰1을 빌려서 페어를 넣는다.
-    function leverageTrade(
-        bool isBuy,
+    function open(
         address collateralAsset,
-        address debtAsset,
         uint256 collateralAmount,
+        address debtAsset,
         uint256 debtAmount
     ) public {
         require(borrowCache.init == false, "already borrowed");
-        // borrowCache = BorrowCache(true, collateralAsset, debtAsset, collateralAmount, debtAmount);
+        borrowCache = BorrowCache(true, uint256(uint160(collateralAsset)), collateralAmount, uint256(uint160(debtAsset)), debtAmount);
 
-        // lending.borrowAndCallback(debtAsset, debtAmount);
-        // fpm.mint([address(uni)], [id], [1], [token0, token1], [debt0, debt1]);
+        asset.safeTransferFrom(msgSender(), address(this), uint256(uint160(collateralAsset)), collateralAmount, "");
+        uint256 id = lending.borrowAndCallback(uint256(uint160(collateralAsset)), debtAsset, debtAmount);
+
+        asset.safeTransferFrom(address(this), msgSender(), id, 1, "");
+
+        delete borrowCache;
     }
 
-    function borrowCallback()
-        public
-        override
-    {
+    function borrowCallback() public override {
         require(borrowCache.init == true, "not borrowed");
+        int256[] memory amounts = sushi.sell(borrowCache.debtAsset, borrowCache.collateralAsset, borrowCache.debtAmount, 0);
+        uint256 tokenAmount = borrowCache.collateralAmount + uint256(amounts[1]);
 
-        // 스왑같은 코드 추가하려면 여기추가.
-
-        // uint256 liquidity = sushi.mint(
-        //     borrowCache.collateralAsset,
-        //     borrowCache.debtAsset,
-        //     borrowCache.collateralAmount,
-        //     borrowCache.debtAmount
-        // );
-        // uint256 lpAddress = sushi.getLP(borrowCache.collateralAsset, borrowCache.debtAsset);
-        // uint256 lpId = sushi.getPoolId(borrowCache.collateralAsset, borrowCache.debtAsset);
-        // tokenId = sushi.deposit(lpId, liquidity);
-        // tokenAmount = 1;
-
-        // _checkAndCreateSushiPool(
-        //     borrowCache.collateralAsset, 
-        //     borrowCache.debtAsset,
-        //     lpAddress,
-        //     lpId
-        // );
-
-        borrowCache.init = false;
+        asset.safeTransferFrom(address(this), msg.sender, borrowCache.collateralAsset, tokenAmount, "");
     }
 
     // 포지션을 뭘로받을지 정해야한다.
-    function close(uint256 debtId, address closer, address receiver) public {
+    function close(uint256 debtId) public {
         require(repayCache.init == false, "already repaid");
-
-        // (uint256 collateralToken, uint256 collateralAmount, ) = debtNFT
-        //     .tokenInfos(debtId);
-        // (address debtAsset, uint256 debtAmount) = lending.getDebt(debtId);
-
-        // repayCache = RepayCache(
-        //     true,
-        //     debtAsset,
-        //     debtAmount,
-        //     collateralToken,
-        //     collateralAmount
-        // );
+        repayCache.init = true;
+        (uint256 collateralToken, uint256 collateralAmount, ) = debtNFT
+            .tokenInfos(debtId);
+        (uint256 debtAsset, uint256 debtAmount) = lending.getDebt(debtId);
+        repayCache = BorrowCache(true, collateralToken, collateralAmount, debtAsset, debtAmount);
+        asset.safeTransferFrom(msgSender(), address(lending), debtId, 1, "");
         lending.repayAndCallback(debtId);
-    }
-
-    function repayCallback()
-        public
-        override
-    {
-        require(repayCache.init == true, "not repaid");
-
-        // sushi.withdraw(repayCache.collateralAsset, repayCache.collateralAmount);
-        // 이렇게하면 어차피 NFT라서 liquidity갯수를 모르지 않나?
-
-        // SushiPool memory pool = sushiPools[lpToPool[tokenId]];
-        // (uint256 amount0, uint256 amount1) = sushi.burn(
-        //     repayCache.collateralAsset,
-        //     repayCache.deptAsset,
-        //     tokenAmount
-        // );
-
-        // if (repayCache.deptAsset == ) {
-
-        // }
-
-        // (uint256 token0, uint256 amount0, uint256 token1, uint256 amount1) = uni
-        //     .burn(collateral, collateralAmount);
-        // uni.swap();
-
         repayCache.init = false;
     }
 
-    function getValue(uint256 id) public view returns (uint256) {
-        return 0;
-    }
-
-    function setURI(string memory newuri) public onlyOwner {
-        _setURI(newuri);
+    function repayCallback() public override {
+        require(repayCache.init == true, "not repaid");
+        uint256 beforeBalance = asset.balanceOf(address(this), repayCache.collateralAsset);
+        sushi.buy(repayCache.collateralAsset, repayCache.debtAsset, repayCache.debtAmount, 0);
+        uint256 afterBalance = beforeBalance - asset.balanceOf(address(this), repayCache.collateralAsset);
+        uint256 returnAmount = repayCache.collateralAmount - (beforeBalance - afterBalance);
+        asset.safeTransferFrom(
+            address(this),
+            msg.sender,
+            repayCache.debtAsset, 
+            repayCache.debtAmount,
+            ""
+        );
+        asset.safeTransferFrom(
+            address(this),
+            asset.caller(),
+            repayCache.collateralAsset, 
+            returnAmount,
+            ""
+        );
+        repayCache.init = false;
     }
 }
