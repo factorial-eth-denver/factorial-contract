@@ -55,23 +55,4 @@ library TriggerBitmap {
         uint8 nextBitIdx = BitMath.leastSignificantBit(curBitmap);
         nextContractId = toConnectionId(bitMapIdx, nextBitIdx);
     }
-
-    function findFirstEmptySpace2(
-        mapping(uint256 => uint) storage self,
-        uint maxBitmapId
-    ) internal view returns (uint256 nextContractId){
-        uint16 bitMapIdx = 0;
-        uint curBitmap;
-        while (true) {
-            curBitmap = ~self[bitMapIdx];
-            if (curBitmap == 0) {
-                require(bitMapIdx <= maxBitmapId, 'Not empty space');
-                bitMapIdx = bitMapIdx + 1;
-            } else {
-                break;
-            }
-        }
-        uint8 nextBitIdx = BitMath.leastSignificantBit(curBitmap);
-        nextContractId = toConnectionId(bitMapIdx, nextBitIdx);
-    }
 }
