@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.5.0;
 
-import "./BitMath.sol";
+import "../../library/BitMath.sol";
 
 import "hardhat/console.sol";
 
