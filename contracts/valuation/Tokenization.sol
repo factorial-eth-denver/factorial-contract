@@ -106,8 +106,8 @@ contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable, Fac
         if (tokenType == 0) tokenType = _tokenId;
         uint256 customFactor = customValuationFactors[_lendingProtocol][tokenType].collateralFactor;
         uint256 collateralFactor = guideValuationFactors[tokenType].collateralFactor;
-        if (collateralFactor != 0) collateralFactor = customFactor > collateralFactor ? collateralFactor : customFactor;
-        return IWrapper(tokenWrapper[uint24(_tokenId >> 232)]).getValue(_tokenId, _amount) * collateralFactor / 10000;
+        if (customFactor != 0) collateralFactor = customFactor > collateralFactor ? collateralFactor : customFactor;
+        return IWrapper(tokenWrapper[uint24(_tokenId >> 232)]).getValueAsCollateral(_tokenId, _amount) * collateralFactor / 10000;
     }
 
     /// @dev Return token value as debt. For debt token wrapper.
@@ -120,6 +120,6 @@ contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable, Fac
         uint256 customFactor = customValuationFactors[_lendingProtocol][tokenType].debtFactor;
         uint256 debtFactor = guideValuationFactors[tokenType].debtFactor;
         if (customFactor != 0) debtFactor = customFactor < debtFactor ? debtFactor : customFactor;
-        return IWrapper(tokenWrapper[uint24(_tokenId >> 232)]).getValue(_tokenId, _amount) * debtFactor / 10000;
+        return IWrapper(tokenWrapper[uint24(_tokenId >> 232)]).getValueAsDebt(_tokenId, _amount) * debtFactor / 10000;
     }
 }
