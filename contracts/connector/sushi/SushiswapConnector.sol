@@ -19,6 +19,7 @@ import "../library/ConnectionBitmap.sol";
 import "../library/SafeCastUint256.sol";
 import "../../utils/FactorialContext.sol";
 
+import "hardhat/console.sol";
 contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable, UUPSUpgradeable, FactorialContext {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeCastUint256 for uint;
@@ -70,8 +71,8 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
     function sell(uint _yourToken, uint _wantToken, uint _amount, uint24) external override {
         asset.safeTransferFrom(msgSender(), address(this), _yourToken, _amount, '');
         address[] memory path = new address[](2);
-        IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), _amount);
         (path[0], path[1]) = (_yourToken.toAddress(), _wantToken.toAddress());
+        IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), _amount);
         sushiRouter.swapExactTokensForTokens(_amount, 1, path, address(this), block.timestamp);
         IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), 0);
     }
@@ -108,11 +109,12 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
     }
 
     function depositNew(uint _pid, uint _amount) external override returns (uint){
+        console.log("1");
         uint24 connectionId = occupyConnection();
         address connection = connectionPool.getConnectionAddress(connectionId);
         bytes memory callData = abi.encodeWithSignature(
-            "deposit(uint256,uint256,address,address,address)",
-            _pid, _amount, masterChef, sushi, msgSender()
+            "deposit(uint256,uint256,address,address,address,address)",
+            _pid, _amount, address(asset), address(masterChef), address(sushi), msgSender()
         );
         IConnection(connection).execute(address(this), callData);
         uint tokenId = (wrapperTokenType << 232) + (uint256(connectionId) << 80) + (_pid);

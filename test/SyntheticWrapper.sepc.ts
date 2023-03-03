@@ -8,7 +8,7 @@ import {
     OracleRouter,
     SyntheticFT,
     SyntheticNFT, TestHelper,
-    Tokenization
+    Tokenization, ConnectionPool
 } from '../typechain';
 import {loadFixture} from "ethereum-waffle";
 import factorialFixture from "./fixture/factorialFixture";
@@ -26,6 +26,7 @@ describe('SyntheticNFT wrapper unit test', () => {
     let erc20Asset: ERC20Asset
     let syntheticFT: SyntheticFT
     let syntheticNFT: SyntheticNFT
+    let connectionPool: ConnectionPool
     let helper: TestHelper
 
     before('load fixture', async () => {
@@ -40,6 +41,7 @@ describe('SyntheticNFT wrapper unit test', () => {
             erc20Asset,
             syntheticFT,
             syntheticNFT,
+            connectionPool,
             helper
         } = await loadFixture(factorialFixture));
     })
@@ -56,10 +58,6 @@ describe('SyntheticNFT wrapper unit test', () => {
 
             let wrapCallData = tokenization.interface.encodeFunctionData("wrap",
                 [SYNTHETIC_NFT_TOKEN_TYPE, wrapParam])
-            console.log(await usdc.balanceOf(user1.address));
-            console.log(await usdc.allowance(user1.address, asset.address));
-            console.log(await weth.balanceOf(user1.address));
-            console.log(await weth.allowance(user1.address, asset.address));
             await router.execute(1000000, tokenization.address, wrapCallData);
         })
 

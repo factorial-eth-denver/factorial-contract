@@ -61,7 +61,7 @@ contract FactorialRouter is OwnableUpgradeable {
                     revert(add(32, returndata), returndata_size)
                 }
             } else {
-                revert('bad execute call');
+                revert('bad router call');
             }
         }
     }
