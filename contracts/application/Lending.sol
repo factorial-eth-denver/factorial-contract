@@ -122,12 +122,6 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
             _amount
         );
 
-        uint256 collValue = tokenization.getValue(
-            tokenId,
-            _amount
-        );
-        console.log("collValue", collValue);
-
         // 추가해줘야함
         uint24 debtTypeId = 8585218;
 
@@ -136,15 +130,14 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
             debtTypeId,
             abi.encode(tokenId, amount, liquidationModule)
         );
-
-        console.log("debtId", debtId);
+        borrows[debtId] = BorrowInfo(_asset, _amount, block.timestamp);
 
         uint256 valueWithFactor = debtNFT.getValueWithFactor(address(this), debtId, 1);
-        require(valueWithFactor == 0, "Lending: insufficient collateral");
+        
+
+        require(valueWithFactor != 0, "Lending: insufficient collateral");
 
         uint256 liquidationValue = Math.mulDiv(borrowFactor, borrowValue, 1e6);
-        borrows[debtId] = BorrowInfo(_asset, _amount, block.timestamp);
-        console.log("debtId", debtId);
 
         bytes memory performData;
         {
@@ -161,7 +154,7 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
         uint256 stopLoss = type(uint256).max;
         bytes memory checkData = abi.encodeWithSignature(
             "check(bytes)",
-            abi.encodePacked(debtId, uint256(1), stopLoss, address(this))
+            abi.encode(debtId, uint256(1), stopLoss, address(this))
         );
         trigger.registerTrigger(
             address(this),
