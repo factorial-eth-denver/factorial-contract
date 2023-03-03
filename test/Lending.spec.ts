@@ -13,7 +13,7 @@ import {
     SimpleBorrower, Lending, Trigger, Liquidation, LiquidationBasic, LiquidationAuction, TriggerLogicStopLoss
 } from '../typechain';
 import {loadFixture} from "ethereum-waffle";
-import factorialFixture2 from "./fixture/factorialFixture2";
+import factorialFixture from "./fixture/factorialFixture3";
 import {expect} from "chai";
 import { BigNumber } from 'ethers';
 
@@ -59,7 +59,7 @@ describe('Lending unit test', () => {
             liquidationBasic,
             liquidationAuction,
             triggerLogicStopLoss
-        } = await loadFixture(factorialFixture2));
+        } = await loadFixture(factorialFixture));
     })
 
     describe('#1 lending simple test', async () => {

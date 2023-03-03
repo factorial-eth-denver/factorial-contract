@@ -12,7 +12,7 @@ import {
     SimpleBorrower, Lending, Trigger, Liquidation, LiquidationBasic, LiquidationAuction, TriggerLogicStopLoss, TriggerLogicTakeProfit, TriggerLogicMaturity, AssetManagement
 } from '../typechain';
 import {loadFixture} from "ethereum-waffle";
-import factorialFixture2 from "./fixture/factorialFixture2";
+import factorialFixture from "./fixture/factorialFixture3";
 import {expect} from "chai";
 import { BigNumber } from 'ethers';
 import {
@@ -69,7 +69,7 @@ describe('Trigger unit test', () => {
             triggerLogicTakeProfit,
             triggerLogicMaturity,
             mockTriggerHandler
-        } = await loadFixture(factorialFixture2));
+        } = await loadFixture(factorialFixture));
 
         // const [signer] = await ethers.getSigners();
         // const usdcAmount = BigNumber.from(10).pow(6).mul(3_000_000);
