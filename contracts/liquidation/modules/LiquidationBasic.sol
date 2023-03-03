@@ -82,6 +82,7 @@ contract LiquidationBasic is ILiquidationModule {
                     liquidateBonusRatio,
                     1e18
                 );
+
                 outAccounts[0] = liquidator;
                 outAccounts[1] = params.prevOwner;
                 outAmounts[0] = _debtAmount + _bounusAmount;
