@@ -10,7 +10,7 @@ import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
 import "../../../interfaces/ITokenization.sol";
 import "../../../interfaces/IWrapper.sol";
-import "../../../interfaces/IMortgage.sol";
+import "../../../interfaces/ILending.sol";
 import "../../../interfaces/ITrigger.sol";
 import "../../../interfaces/ILiquidation.sol";
 import "../../../interfaces/IAsset.sol";
@@ -75,7 +75,6 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
     function unwrap(address _caller, uint _tokenId, uint _amount) external override onlyTokenization {
         DebtToken memory nft = tokenInfos[_tokenId];
         asset.burn(_caller, _tokenId, 1);
-        IMortgage(address(uint160(_tokenId))).repay(_tokenId);
         asset.safeTransferFrom(address(this), _caller, nft.collateralToken, _amount, '');
         delete tokenInfos[_tokenId];
     }
@@ -83,7 +82,7 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
     function getValue(uint _tokenId, uint) public view override returns (uint){
         DebtToken memory nft = tokenInfos[_tokenId];
         uint collateralValue = tokenization.getValue(nft.collateralToken, nft.collateralAmount);
-        (uint debtTokenId, uint debtAmount) = IMortgage(address(uint160(_tokenId))).getDebt(_tokenId);
+        (uint debtTokenId, uint debtAmount) = ILending(address(uint160(_tokenId))).getDebt(_tokenId);
         uint debTokenValue = tokenization.getValue(debtTokenId, debtAmount);
         if (collateralValue < debTokenValue) {
             return 0;
@@ -98,7 +97,7 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
             nft.collateralToken,
             nft.collateralAmount
         );
-        (uint debtTokenId, uint debtAmount) = IMortgage(address(uint160(_tokenId))).getDebt(_tokenId);
+        (uint debtTokenId, uint debtAmount) = ILending(address(uint160(_tokenId))).getDebt(_tokenId);
         uint debtValue = tokenization.getValueAsDebt(
             _lendingProtocol,
             debtTokenId,
