@@ -8,19 +8,27 @@ import "../../valuation/Tokenization.sol";
 // import "hardhat/console.sol";
 
 contract TriggerLogicTakeProfit is ITriggerLogic {
+
+    Tokenization tokenization;
+
+    constructor(address _tokenization) {
+        tokenization = Tokenization(_tokenization);
+    }
+
     struct TakeProfitParams {
+        uint256 tokenId;
+        uint256 tokenAmount;
         uint256 takeProfit;
     }
 
     function check(
-        uint256 initialValue,
-        uint256 currentValue,
         bytes calldata _takeProfitParams
-    ) external override returns (bool) {
+    ) external override view returns (bool) {
         TakeProfitParams memory params = abi.decode(
             _takeProfitParams,
             (TakeProfitParams)
         );
+        uint256 currentValue = tokenization.getValue(params.tokenId, params.tokenAmount);
         return currentValue >= params.takeProfit;
     }
 }
