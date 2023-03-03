@@ -128,6 +128,7 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
             "deposit(uint256,uint256,address,address,address,address)",
             _pid, _amount, address(asset), address(masterChef), address(sushi), msgSender()
         );
+        console.log(connection);
         IConnection(connection).execute(address(this), callData);
         uint tokenId = (wrapperTokenType << 232) + (uint256(connectionId) << 80) + (_pid);
         asset.mint(msgSender(), tokenId, 1);
@@ -193,6 +194,11 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
 
     function getLP(uint _tokenA, uint _tokenB) public view returns (uint256) {
         return uint256(uint160(IUniswapV2Factory(sushiRouter.factory()).getPair(_tokenA.toAddress(), _tokenB.toAddress())));
+    }
+
+    function getNextTokenId(uint _pid) public view returns (uint256) {
+        uint24 connectionId = connectionBitMap.findFirstEmptySpace(connectionPool.getConnectionMax() / 256);
+        return (wrapperTokenType << 232) + (uint256(connectionId) << 80) + (_pid);
     }
 
     function occupyConnection() internal returns (uint24){

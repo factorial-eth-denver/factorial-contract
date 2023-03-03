@@ -27,6 +27,7 @@ contract ConnectionPool is IConnectionPool, OwnableUpgradeable {
     function initialize(address _asset) external initializer{
         __Ownable_init();
         asset = IAsset(_asset);
+        connectionImpl = address(new Connection());
     }
 
     /// @dev Register connector.
@@ -34,7 +35,6 @@ contract ConnectionPool is IConnectionPool, OwnableUpgradeable {
     function registerConnector(address _connector) external onlyOwner {
         lastConnectorId ++;
         connectors[_connector] = lastConnectorId;
-        connectionImpl = address(new Connection());
     }
 
     function increaseConnection(uint n) external {

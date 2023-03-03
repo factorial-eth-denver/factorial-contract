@@ -77,7 +77,7 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper, Fact
     function unwrap(address _caller, uint _tokenId, uint _amount) external override onlyTokenization {
         DebtToken memory nft = tokenInfos[_tokenId];
         asset.burn(_caller, _tokenId, 1);
-        asset.safeTransferFrom(address(this), _caller, nft.collateralToken, _amount, '');
+        asset.safeTransferFrom(address(this), _caller, nft.collateralToken, nft.collateralAmount, '');
         delete tokenInfos[_tokenId];
     }
 
