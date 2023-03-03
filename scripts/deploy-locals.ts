@@ -22,8 +22,9 @@ import {
     SyntheticFT,
     SyntheticNFT,
     TestHelper,
-    Tokenization, UniswapV2Oracle
+    Tokenization, UniswapV2Oracle, WrappedNativeToken__factory
 } from "../typechain";
+
 async function main() {
     const [owner] = await ethers.getSigners();
 
@@ -50,7 +51,7 @@ async function main() {
     const SushiConnectorFactory = await ethers.getContractFactory('SushiswapConnector');
     const SushiswapV2NFTFactory = await ethers.getContractFactory('SushiswapV2NFT');
 
-    let wmatic = await MockERC20__factory.connect(config.WMATIC, deployer);
+    let wmatic = await WrappedNativeToken__factory.connect(config.WMATIC, deployer);
     let sushi = await MockERC20__factory.connect(config.SUSHI, deployer);
     let usdc = await MockERC20__factory.connect(config.USDC, deployer);
     let wmatic_usdc_lp = await MockERC20__factory.connect(config.SUSHI_WMATIC_USDC_LP, deployer);
@@ -131,9 +132,18 @@ async function main() {
     await connectionPool.increaseConnection(10);
 
     await asset.registerFactorialModules([sushiConnector.address]);
-    // Change connectionPool address
     await sushiConnector.initialize(tokenization.address, asset.address, connectionPool.address, config.SUSHI_MINICHEF, config.SUSHI_ROUTER, SUSHI_NFT_TOKEN_TYPE);
     await connectionPool.registerConnector(sushiConnector.address);
+
+
+    /// Optional
+    await wmatic.deposit({value: "100000000000000000000"});
+
+    let usdcId = await helper.convertAddressToId(usdc.address);
+    let wmaticId = await helper.convertAddressToId(wmatic.address);
+    let sellCalldata = sushiConnector.interface.encodeFunctionData("sell",
+        [wmaticId, usdcId, "5000000000000000000", 0])
+    await router.execute(MaxUint128, sushiConnector.address, sellCalldata);
 
     console.log("Deploy success ... 6/6 ");
     config.ADMIN = owner.address;

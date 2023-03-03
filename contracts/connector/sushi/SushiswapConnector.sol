@@ -59,38 +59,78 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
     }
 
     function buy(uint _yourToken, uint _wantToken, uint _amount, uint24) external override returns (int[] memory amounts){
+        // 0. Get lp address
+        address lp = IUniswapV2Factory(sushiRouter.factory()).getPair(_yourToken.toAddress(), _wantToken.toAddress());
+
+        // 1. Calculate amount in
+        bool zeroToOne = false;
+        uint amountIn;
+        {
+            uint reserveIn;
+            uint reserveOut;
+            if (IUniswapV2Pair(lp).token0() == _yourToken.toAddress()) {
+                (reserveIn, reserveOut,) = IUniswapV2Pair(lp).getReserves();
+                zeroToOne = true;
+            } else {
+                (reserveOut, reserveIn,) = IUniswapV2Pair(lp).getReserves();
+            }
+            uint numerator = reserveIn * _amount * 1000;
+            uint denominator = (reserveOut - _amount) * 997;
+            amountIn = (numerator / denominator) + 1;
+        }
+
+        // 2. Swap
+        asset.safeTransferFrom(msgSender(), address(this), _yourToken, amountIn, '');
+        IERC20Upgradeable(_yourToken.toAddress()).transfer(lp, amountIn);
+        if (zeroToOne) {
+            IUniswapV2Pair(lp).swap(0, _amount, address(this), "");
+        } else {
+            IUniswapV2Pair(lp).swap(_amount, 0, address(this), "");
+        }
+
+        // Make return data
         amounts = new int[](2);
-        uint balance = asset.balanceOf(msgSender(), _yourToken);
-        asset.safeTransferFrom(msgSender(), address(this), _yourToken, balance, '');
-        address[] memory path = new address[](2);
-        (path[0], path[1]) = (_yourToken.toAddress(), _wantToken.toAddress());
-        IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), type(uint128).max);
-        uint[] memory returnData = sushiRouter.swapTokensForExactTokens(
-            _amount,
-            balance,
-            path,
-            address(this),
-            block.timestamp
-        );
-        amounts[0] = int256(returnData[0]);
-        amounts[1] = int256(returnData[1]);
-        IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), 0);
-        uint left = asset.balanceOf(address(this), _yourToken);
-        asset.safeTransferFrom(address(this), msgSender(), _yourToken, left, '');
+        amounts[0] = int256(amountIn) * - 1;
+        amounts[1] = int256(_amount);
         asset.safeTransferFrom(address(this), msgSender(), _wantToken, _amount, '');
     }
 
     function sell(uint _yourToken, uint _wantToken, uint _amount, uint24) external override returns (int[] memory amounts){
-        amounts = new int[](2);
+        // 0. Get lp address
+        address lp = IUniswapV2Factory(sushiRouter.factory()).getPair(_yourToken.toAddress(), _wantToken.toAddress());
+
+        // 1. Calculate amount out
+        bool zeroToOne = false;
+        uint amountOut;
+        {
+            uint reserveIn;
+            uint reserveOut;
+            if (IUniswapV2Pair(lp).token0() == _yourToken.toAddress()) {
+                (reserveIn, reserveOut,) = IUniswapV2Pair(lp).getReserves();
+                zeroToOne = true;
+            } else {
+                (reserveOut, reserveIn,) = IUniswapV2Pair(lp).getReserves();
+            }
+            uint amountInWithFee = _amount * 997;
+            uint numerator = amountInWithFee * reserveOut;
+            uint denominator = (reserveIn * 1000) + amountInWithFee;
+            amountOut = numerator / denominator;
+        }
+
+        // 2. Swap
         asset.safeTransferFrom(msgSender(), address(this), _yourToken, _amount, '');
-        address[] memory path = new address[](2);
-        (path[0], path[1]) = (_yourToken.toAddress(), _wantToken.toAddress());
-        IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), _amount);
-        uint[] memory returnData = sushiRouter.swapExactTokensForTokens(_amount, 1, path, address(this), block.timestamp);
-        amounts[0] = int256(returnData[0]);
-        amounts[1] = int256(returnData[1]);
-        IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), 0);
-        asset.safeTransferFrom(address(this), msgSender(), _wantToken, _amount, '');
+        IERC20Upgradeable(_yourToken.toAddress()).transfer(lp, _amount);
+        if (zeroToOne) {
+            IUniswapV2Pair(lp).swap(0, amountOut, address(this), "");
+        } else {
+            IUniswapV2Pair(lp).swap(amountOut, 0, address(this), "");
+        }
+
+        // 3. Make return data
+        amounts = new int[](2);
+        amounts[0] = int256(_amount) * - 1;
+        amounts[1] = int256(amountOut);
+        asset.safeTransferFrom(address(this), msgSender(), _wantToken, amountOut, '');
     }
 
     function mint(uint[] calldata _tokens, uint[] calldata _amounts) external override returns (uint) {
