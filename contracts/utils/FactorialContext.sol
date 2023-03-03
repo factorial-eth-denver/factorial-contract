@@ -10,9 +10,11 @@ import "../../interfaces/IFactorialModule.sol";
 abstract contract FactorialContext is IFactorialModule{
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    /// ----- INIT STATES -----
     address public router;
     IAsset public asset;
 
+    /// @dev Initialize context.
     modifier initContext(address _asset) {
         asset = IAsset(_asset);
         router = asset.router();

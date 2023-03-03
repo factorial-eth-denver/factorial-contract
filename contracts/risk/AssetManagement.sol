@@ -15,12 +15,11 @@ import "../../interfaces/ITrigger.sol";
 import "../../interfaces/IWrapper.sol";
 import "../../interfaces/IAsset.sol";
 
-import "hardhat/console.sol";
-
-contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeable {
+contract AssetManagement is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeCastUint256 for uint256;
 
+    /// ----- VARIABLE STATES -----
     struct VariableCache {
         address caller;
         uint256 maximumLoss;
@@ -28,18 +27,21 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
         uint256 outputValue;
     }
 
-    /// ----- SETTING STATES -----
-    VariableCache public cache;
-    ITokenization public tokenization;
-
     /// ----- VARIABLE STATES -----
+    VariableCache public cache;
+
+    /// ----- INIT STATES -----
+    ITokenization public tokenization;
+    address public router;
+
+    /// ----- SETTING STATES -----
     mapping(address => bool) public factorialModules;
     mapping(uint256 => address) public ownerOf;
-    address public router;
+
 
     /// @dev Throws if called by not factorial module.
     modifier onlyFactorialModule() {
-        require(factorialModules[_msgSender()], 'Only factorial module');
+        require(factorialModules[_msgSender()] || _msgSender() == owner(), 'Only factorial module');
         _;
     }
 
@@ -52,22 +54,27 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
     /// @dev required by the OZ UUPS module
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
+    /// @dev Initialize asset management contract
+    /// @param _router The factorial router contract.
+    /// @param _tokenization The factorial tokenization contract.
     function initialize(address _router, address _tokenization) external initializer {
         __Ownable_init();
         router = _router;
         tokenization = ITokenization(_tokenization);
     }
 
-    function registerFactorialModules(address[] calldata _factorialModules) external onlyOwner {
+    /// @dev Register whitelisted factorial modules. This modules can hold & transfer ERC20 asset.
+    /// @param _factorialModules The factorial modules to register.
+    function registerFactorialModules(address[] calldata _factorialModules) external onlyFactorialModule {
         for (uint i = 0; i < _factorialModules.length; i++) {
             factorialModules[_factorialModules[i]] = true;
         }
     }
 
-    function caller() external view returns (address) {
-        return cache.caller;
-    }
-
+    /// @dev Mint ERC1155 token & track factorial caller's input. Only called by factorial modules.
+    /// @param _to The receiver address.
+    /// @param _tokenId The token id to mint.
+    /// @param _amount The amount of minting.
     function mint(address _to, uint _tokenId, uint _amount) public onlyFactorialModule {
         if (_to == cache.caller) {
             cache.outputValue += tokenization.getValue(_tokenId, _amount);
@@ -75,6 +82,10 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
         _mint(_to, _tokenId, _amount, "");
     }
 
+    /// @dev Burn ERC1155 token & track factorial caller's output. Only called by factorial modules.
+    /// @param _from The payer address.
+    /// @param _tokenId The token id to burn.
+    /// @param _amount The amount of burn.
     function burn(address _from, uint _tokenId, uint _amount) public onlyFactorialModule {
         if (_from == cache.caller) {
             cache.inputValue += tokenization.getValue(_tokenId, _amount);
@@ -82,25 +93,24 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
         _burn(_from, _tokenId, _amount);
     }
 
+    /// @dev Caching states for financial soundness.
+    /// @param _maximumLoss The maximum loss of this tx.
+    /// @param _caller The external caller of factorial tx.
     function beforeExecute(uint _maximumLoss, address _caller) external onlyRouter {
         require(cache.caller == address(0), 'Locked');
         cache.caller = _caller;
         cache.maximumLoss = _maximumLoss;
     }
 
+    /// @dev Validate caller's input/output assets.
     function afterExecute() external onlyRouter {
-        console.log(cache.outputValue);
-        console.log(cache.inputValue);
-        console.log(cache.maximumLoss);
         require(cache.outputValue + cache.maximumLoss > cache.inputValue, 'Over slippage');
-        cache.caller = address(0);
-        cache.maximumLoss = 0;
-        cache.inputValue = 0;
-        cache.outputValue = 0;
+        delete cache;
     }
 
     /**
-     * @dev See {IERC1155-safeTransferFrom}.
+     * @dev This function override {ERC1155-safeTransferFrom}.
+     * Include tracking caller's input/outpunt asset & ERC20 converter.
      */
     function safeTransferFrom(
         address _from,
@@ -147,7 +157,8 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
     }
 
     /**
-     * @dev See {IERC1155-safeBatchTransferFrom}.
+     * @dev This function override {ERC1155-safeBatchTransferFrom}.
+     * Include tracking caller's input/outpunt asset & ERC20 converter.
      */
     function safeBatchTransferFrom(
         address _from,
@@ -197,6 +208,7 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
         _safeBatchTransferFrom(_from, _to, _ids, _amounts, _data);
     }
 
+    /// @dev The helper function for transfer with erc20 transfer.
     function safeTransferFrom(
         address _from,
         address _to,
@@ -206,17 +218,8 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
         safeTransferFrom(_from, _to, uint256(uint160(_id)), _amount, '');
     }
 
-    function balanceOf(address account, uint256 id) public view override returns (uint256) {
-        require(account != address(0), "ERC1155: address zero is not a valid owner");
-
-        if (id >> 160 == 0) {
-            if (account == cache.caller || factorialModules[account]) {
-                return IERC20Upgradeable(id.toAddress()).balanceOf(account);
-            }
-        }
-        return super.balanceOf(account, id);
-    }
-
+    /// ----- OVERRIDE FUNCTIONS -----
+    /// @dev After transfer, write ownerOf like ERC721.
     function _afterTokenTransfer(
         address,
         address,
@@ -232,10 +235,28 @@ contract FactorialAsset is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeab
         }
     }
 
+    /// @dev If account is ERC20 holders, return ERC20 balance else return ERC1155 balance.
+    function balanceOf(address account, uint256 id) public view override returns (uint256) {
+        require(account != address(0), "ERC1155: address zero is not a valid owner");
+        if (id >> 160 == 0) {
+            if (account == cache.caller || factorialModules[account]) {
+                return IERC20Upgradeable(id.toAddress()).balanceOf(account);
+            }
+        }
+        return super.balanceOf(account, id);
+    }
+
+    /// ----- VIEW FUNCTIONS -----
+    /// @dev Return msg sender. If sender is router, return factorial tx caller.
     function _msgSender() internal view override returns (address) {
         if (msg.sender == router) {
             return cache.caller;
         }
         return msg.sender;
+    }
+
+    /// @dev Return caller of factorial tx.
+    function caller() external view returns (address) {
+        return cache.caller;
     }
 }

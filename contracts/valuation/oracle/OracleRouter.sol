@@ -16,7 +16,7 @@ contract OracleRouter is IPriceOracle, OwnableUpgradeable, UUPSUpgradeable {
     function initialize() public initializer {
         __Ownable_init();
     }
-
+    /// ----- ADMIN FUNCTIONS -----
     function setRoute(address[] calldata tokens, address[] calldata targetOracles) external onlyOwner {
         require(tokens.length == targetOracles.length, 'inconsistent length');
         for (uint i = 0; i < tokens.length; i++) {
@@ -24,9 +24,12 @@ contract OracleRouter is IPriceOracle, OwnableUpgradeable, UUPSUpgradeable {
         }
     }
 
-    function getPrice(address token) external view override returns (uint) {
-        require(oracles[token] != address(0), 'Unregistered token');
-        uint price = IPriceOracle(oracles[token]).getPrice(token);
+    /// ----- VIEW FUNCTIONS -----
+    /// @dev Get token price using oracle.
+    /// @param _token Token address to get price.
+    function getPrice(address _token) external view override returns (uint) {
+        require(oracles[_token] != address(0), 'Unregistered token');
+        uint price = IPriceOracle(oracles[_token]).getPrice(_token);
         return price;
     }
 }

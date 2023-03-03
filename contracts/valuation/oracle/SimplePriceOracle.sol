@@ -16,13 +16,17 @@ contract SimplePriceOracle is IPriceOracle, OwnableUpgradeable, UUPSUpgradeable 
         __Ownable_init();
     }
 
-    function getPrice(address token) external override view returns (uint price) {
-        price = prices[token];
-        require(price != 0, 'SimplePriceValuation getPrice: Invalid price');
-    }
-
+    /// ----- ADMIN FUNCTIONS -----
     function setPrice(address token, uint price) external onlyOwner {
         require(price != 0, 'SimplePriceValuation setPrice: Invalid input price');
         prices[token] = price;
+    }
+
+    /// ----- VIEW FUNCTIONS -----
+    /// @dev Get token price using oracle.
+    /// @param _token Token address to get price.
+    function getPrice(address _token) external override view returns (uint price) {
+        price = prices[_token];
+        require(price != 0, 'SimplePriceValuation getPrice: Invalid price');
     }
 }

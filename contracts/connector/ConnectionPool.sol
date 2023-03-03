@@ -48,7 +48,7 @@ contract ConnectionPool is IConnectionPool, OwnableUpgradeable {
         return connectors[_connector] != 0;
     }
 
-    function getConnectionAddress(uint _connectionId) external override view returns (address) {
+    function getConnectionAddress(uint24 _connectionId) external override view returns (address) {
         return connections[_connectionId];
     }
 

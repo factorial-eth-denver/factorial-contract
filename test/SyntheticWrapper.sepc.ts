@@ -1,7 +1,9 @@
 import {ethers} from 'hardhat';
 import {
     DebtNFT,
-    ERC20Asset, FactorialAsset, FactorialRouter,
+    ERC20Asset,
+    AssetManagement,
+    FactorialRouter,
     MockERC20,
     OracleRouter,
     SyntheticFT,
@@ -18,7 +20,7 @@ describe('SyntheticNFT wrapper unit test', () => {
     let usdc: MockERC20
     let oracleRouter: OracleRouter
     let router: FactorialRouter
-    let asset: FactorialAsset
+    let asset: AssetManagement
     let tokenization: Tokenization
     let debtNFT: DebtNFT
     let erc20Asset: ERC20Asset
@@ -54,6 +56,10 @@ describe('SyntheticNFT wrapper unit test', () => {
 
             let wrapCallData = tokenization.interface.encodeFunctionData("wrap",
                 [SYNTHETIC_NFT_TOKEN_TYPE, wrapParam])
+            console.log(await usdc.balanceOf(user1.address));
+            console.log(await usdc.allowance(user1.address, asset.address));
+            console.log(await weth.balanceOf(user1.address));
+            console.log(await weth.allowance(user1.address, asset.address));
             await router.execute(1000000, tokenization.address, wrapCallData);
         })
 
@@ -68,7 +74,7 @@ describe('SyntheticNFT wrapper unit test', () => {
             expect(await asset.balanceOf(syntheticNFT.address, wethId)).to.equal("1000000000000000000");
             expect((await syntheticNFT.getTokenInfo(synthTokenId)).amounts[0].toString()).to.equal("1000000");
             expect((await syntheticNFT.getTokenInfo(synthTokenId)).amounts[1].toString()).to.equal("1000000000000000000");
-            expect(await syntheticNFT.getValue(synthTokenId, 10000)).to.equal("2001000000000000000000");
+            expect(await syntheticNFT.getValue(synthTokenId, 1)).to.equal("2001000000000000000000");
         })
 
         it('#1-3 unwrap success test', async () => {

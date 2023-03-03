@@ -7,4 +7,8 @@ interface ITokenization {
     function unwrap(uint _tokenId, uint _amount) external;
 
     function getValue(uint tokenId, uint amount) external view returns (uint);
+
+    function getValueAsCollateral(address lendingProtocol, uint tokenId, uint amount) external view returns (uint);
+
+    function getValueAsDebt(address lendingProtocol, uint tokenId, uint amount) external view returns (uint);
 }
