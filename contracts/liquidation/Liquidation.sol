@@ -88,8 +88,8 @@ contract Liquidation is IRepayable, OwnableUpgradeable, FactorialContext, ERC115
                 collateralAmount,
             ) = debtNFT.tokenInfos(_positionId);
 
-            (address debtAsset, uint256 debtAmount) = lending.getDebt(_positionId);
-            debtToken = uint256(uint160(debtAsset));
+            (uint256 debtAsset, uint256 debtAmount) = lending.getDebt(_positionId);
+            debtToken = debtAsset;
             repayCache = RepayCache(
                 true,
                 collateralToken,

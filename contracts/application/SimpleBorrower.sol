@@ -86,14 +86,14 @@ contract SimpleBorrower is IBorrowable, ERC1155HolderUpgradeable, FactorialConte
 
         (uint256 collateralToken, uint256 collateralAmount, ) = debtNFT
             .tokenInfos(debtId);
-        (address debtAsset, uint256 debtAmount) = lending.getDebt(debtId);
+        (uint256 debtAsset, uint256 debtAmount) = lending.getDebt(debtId);
         
         asset.safeTransferFrom(msgSender(), address(lending), debtId, 1, "");
         repayCache = BorrowCache(
             true,
             collateralToken,
             collateralAmount,
-            uint256(uint160(debtAsset)),
+            debtAsset,
             debtAmount
         );
 

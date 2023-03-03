@@ -36,7 +36,7 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
     address public liquidation;
     address public liquidationModule;
 
-    uint256 public borrowFactor = 1.1e18;
+    uint256 public borrowFactor = 1.1e6;
     uint256 public borrowFeeRatio = 6341958396; // 0.2e18 / (365 * 24 * 3600)
 
     mapping(address => Bank) public banks;
@@ -121,13 +121,12 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
             uint256(uint160(_asset)),
             _amount
         );
-        uint256 positionValue = tokenization.getValue(tokenId, amount);
-        uint256 liquidationValue = Math.mulDiv(borrowFactor, borrowValue, 1e18); 
-        
-        require(
-            positionValue > liquidationValue,
-            "Lending: insufficient collateral"
+
+        uint256 collValue = tokenization.getValue(
+            tokenId,
+            _amount
         );
+        console.log("collValue", collValue);
 
         // 추가해줘야함
         uint24 debtTypeId = 8585218;
@@ -137,6 +136,13 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
             debtTypeId,
             abi.encode(tokenId, amount, liquidationModule)
         );
+
+        console.log("debtId", debtId);
+
+        uint256 valueWithFactor = debtNFT.getValueWithFactor(address(this), debtId, 1);
+        require(valueWithFactor == 0, "Lending: insufficient collateral");
+
+        uint256 liquidationValue = Math.mulDiv(borrowFactor, borrowValue, 1e6);
         borrows[debtId] = BorrowInfo(_asset, _amount, block.timestamp);
         console.log("debtId", debtId);
 
@@ -150,12 +156,12 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
             );
         }
 
-        uint256 stopLossLogicId = 1;
+        uint256 stopLossLogicId = 4;
         // uint256 stopLoss = liquidationValue;
         uint256 stopLoss = type(uint256).max;
         bytes memory checkData = abi.encodeWithSignature(
             "check(bytes)",
-            abi.encodePacked(debtId, uint256(1), stopLoss)
+            abi.encodePacked(debtId, uint256(1), stopLoss, address(this))
         );
         trigger.registerTrigger(
             address(this),
@@ -167,7 +173,6 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
             performData
         );
 
-        // 트리거의 오너만 트리거를 취소할 수 있게해야함. 오너를 설정할수 있게 해야함.
         asset.safeTransferFrom(
             address(this),
             msg.sender,
@@ -184,15 +189,14 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
         (
             uint256 collateralToken,
             uint256 collateralAmount,
-            address liquidationModule
         ) = debtNFT.tokenInfos(_debtId);
-        (address debtAsset, uint256 debtAmount) = getDebt(_debtId);
+        (uint256 debtAsset, uint256 debtAmount) = getDebt(_debtId);
 
         tokenization.unwrap(_debtId, 1);
         asset.safeTransferFrom(address(this), msg.sender, collateralToken, collateralAmount, "");
-        uint256 beforeAmount = asset.balanceOf(address(this), uint256(uint160(debtAsset)));
+        uint256 beforeAmount = asset.balanceOf(address(this), debtAsset);
         IBorrowable(msg.sender).repayCallback();
-        uint256 amount = asset.balanceOf(address(this), uint256(uint160(debtAsset))) - beforeAmount; 
+        uint256 amount = asset.balanceOf(address(this), debtAsset) - beforeAmount; 
 
         require(amount >= debtAmount,"Lending: insufficient collateral");
 
@@ -210,7 +214,6 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
             (
                 uint256 collateralToken,
                 uint256 collateralAmount,
-                address liquidationModule
             ) = debtNFT.tokenInfos(_debtId);
 
             asset.safeTransferFrom(msgSender(), address(this), _debtId, 1, "");
@@ -249,9 +252,9 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
         return fee * duration;
     }
 
-    function getDebt(uint256 _debtId) public view returns (address, uint256) {
+    function getDebt(uint256 _debtId) public view returns (uint256, uint256) {
         BorrowInfo memory borrowInfo = borrows[_debtId];
-        return (borrowInfo.debtAsset, borrowInfo.debtAmount + calcFee(_debtId));
+        return (uint256(uint160(borrowInfo.debtAsset)), borrowInfo.debtAmount + calcFee(_debtId));
     }
 
     function convertToShare(

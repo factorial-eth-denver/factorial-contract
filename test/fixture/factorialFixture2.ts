@@ -10,10 +10,9 @@ import {
     SushiswapV2NFT,
     SyntheticFT,
     SyntheticNFT,
-    UniswapV2FT,
-    TestHelper, FactorialRouter, FactorialAsset,
-    MockTriggerHandler,
-    SimpleBorrower, Lending, Trigger, Liquidation, LiquidationBasic, LiquidationAuction, TriggerLogicStopLoss, TriggerLogicTakeProfit, TriggerLogicMaturity
+    TestHelper, FactorialRouter, AssetManagement,
+    MockTriggerHandler, 
+    SimpleBorrower, Lending, Trigger, Liquidation, LiquidationBasic, LiquidationAuction, TriggerLogicStopLoss, TriggerLogicTakeProfit, TriggerLogicMaturity, TriggerLogicLiquidate
 } from '../../typechain'
 import {
     DEBT_NFT_TOKEN_TYPE,
@@ -27,7 +26,7 @@ const factorialFixture: Fixture<{
     usdc: MockOldERC20
     oracleRouter: OracleRouter
     router: FactorialRouter
-    asset: FactorialAsset
+    asset: AssetManagement
     tokenization: Tokenization
     debtNFT: DebtNFT
     erc20Asset: ERC20Asset
@@ -51,14 +50,13 @@ const factorialFixture: Fixture<{
     const OracleRouterFactory = await ethers.getContractFactory('OracleRouter');
     const SimplePriceOracleFactory = await ethers.getContractFactory('SimplePriceOracle');
     const FactorialRouterFactory = await ethers.getContractFactory('FactorialRouter');
-    const FactorialAssetFactory = await ethers.getContractFactory('FactorialAsset');
+    const AssetManagementFactory = await ethers.getContractFactory('AssetManagement');
     const TokenizationFactory = await ethers.getContractFactory('Tokenization');
     const DebtNFTFactory = await ethers.getContractFactory('DebtNFT');
     const ERC20AssetFactory = await ethers.getContractFactory('ERC20Asset');
     const SushiswapV2NFTFactory = await ethers.getContractFactory('SushiswapV2NFT');
     const SyntheticFTFactory = await ethers.getContractFactory('SyntheticFT');
     const SyntheticNFTFactory = await ethers.getContractFactory('SyntheticNFT');
-    const UniswapV2FTFactory = await ethers.getContractFactory('UniswapV2FT');
     const testHelperFactory = await ethers.getContractFactory('TestHelper');
 
     const simpleBorrowerFactory = await ethers.getContractFactory('SimpleBorrower');
@@ -70,14 +68,17 @@ const factorialFixture: Fixture<{
     const triggerLogicStopLossFactory = await ethers.getContractFactory('TriggerLogicStopLoss');
     const triggerLogicTakeProfitFactory = await ethers.getContractFactory('TriggerLogicTakeProfit');
     const triggerLogicMaturityFactory = await ethers.getContractFactory('TriggerLogicMaturity');
+    const triggerLogicLiquidateFactory = await ethers.getContractFactory('TriggerLogicLiquidate');
     const mockTriggerHandlerFactory = await ethers.getContractFactory('MockTriggerHandler');
+
+    console.log("a1");
 
     const weth = await MockERC20Factory.deploy("mockWETH", "WETH", "18") as MockOldERC20;
     const usdc = await MockERC20Factory.deploy("mockUSDC", "USDC", "6") as MockOldERC20;
     const oracleRouter = await OracleRouterFactory.deploy() as OracleRouter;
     const simplePriceOracle = await SimplePriceOracleFactory.deploy() as SimplePriceOracle;
     const router = await FactorialRouterFactory.deploy() as FactorialRouter;
-    const asset = await FactorialAssetFactory.deploy() as FactorialAsset;
+    const asset = await AssetManagementFactory.deploy() as AssetManagement;
     const tokenization = await TokenizationFactory.deploy() as Tokenization;
     const debtNFT = await DebtNFTFactory.deploy() as DebtNFT;
     const erc20Asset = await ERC20AssetFactory.deploy() as ERC20Asset;
@@ -92,10 +93,10 @@ const factorialFixture: Fixture<{
     const triggerLogicStopLoss = await triggerLogicStopLossFactory.deploy(tokenization.address) as TriggerLogicStopLoss;
     const triggerLogicTakeProfit = await triggerLogicTakeProfitFactory.deploy(tokenization.address) as TriggerLogicTakeProfit;
     const triggerLogicMaturity = await triggerLogicMaturityFactory.deploy() as TriggerLogicMaturity;
+    const triggerLogicLiquidate = await triggerLogicLiquidateFactory.deploy(debtNFT.address) as TriggerLogicLiquidate;
     const lending = await lendingFactory.deploy() as Lending;
     const simpleBorrower = await simpleBorrowerFactory.deploy() as SimpleBorrower;
     const mockTriggerHandler = await mockTriggerHandlerFactory.deploy() as MockTriggerHandler;
-
     await router.initialize(asset.address);
     await asset.initialize(router.address, tokenization.address);
     await tokenization.initialize(asset.address);
@@ -125,6 +126,7 @@ const factorialFixture: Fixture<{
     await trigger.addTriggerLogic(triggerLogicStopLoss.address);
     await trigger.addTriggerLogic(triggerLogicTakeProfit.address);
     await trigger.addTriggerLogic(triggerLogicMaturity.address);
+    await trigger.addTriggerLogic(triggerLogicLiquidate.address);
 
     await liquidation.addModules([liquidationBasic.address, liquidationAuction.address]);
     

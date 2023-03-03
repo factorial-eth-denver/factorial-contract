@@ -33,7 +33,6 @@ interface IAsset {
         uint256 amount
     ) external;
     
-    function ownerOf(uint256 id) external view returns (address);
     function balanceOf(address account, uint256 id) external view returns (uint256);
     function caller() external view returns (address);
     function router() external view returns (address);

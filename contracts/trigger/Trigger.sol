@@ -72,7 +72,7 @@ contract Trigger is AutomationCompatible, OwnableUpgradeable, FactorialContext {
         );
         require(triggerLogics[triggerLogicId] != address(0), "Not Exist TriggerLogic");
 
-        triggerId = triggerBitmap.findFirstEmptySpace2(triggerCountPerPage * maxPage / 256);
+        triggerId = triggerBitmap.findFirstEmptySpace(triggerCountPerPage * maxPage / 256);
 
         triggerInfos[triggerId] = TriggerInfo(
             owner,
