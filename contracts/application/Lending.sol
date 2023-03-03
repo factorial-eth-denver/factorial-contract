@@ -11,9 +11,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
 
-// import "@openzeppelin/contracts-upgradable/token/ERC1155/ERC1155.sol";
-// import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
-// import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "../utils/FactorialContext.sol";
@@ -90,7 +87,7 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
     function withdraw(address _asset, uint256 _amount) external {
         uint256 share = convertToShare(_asset, _amount);
         _burn(msgSender(), uint256(uint160(_asset)), share);
-
+        
         asset.safeTransferFrom(
             address(this),
             msgSender(),
@@ -106,7 +103,6 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
         address _asset,
         uint256 _amount
     ) external returns (uint256) {
-
         asset.safeTransferFrom(
             address(this),
             msg.sender,
@@ -116,82 +112,59 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
         );
 
         uint256 beforeAmount = asset.balanceOf(address(this), tokenId);
-        // IBorrowable(msgSender()).borrowCallback();
         IBorrowable(msg.sender).borrowCallback();
         uint256 amount = asset.balanceOf(address(this), tokenId) - beforeAmount;
+
+        console.log("synId", tokenId);
 
         uint256 borrowValue = tokenization.getValue(
             uint256(uint160(_asset)),
             _amount
         );
         uint256 positionValue = tokenization.getValue(tokenId, amount);
-        console.log("borrowValue adjust  : ", Math.mulDiv(borrowFactor, borrowValue, 1e18));
-        console.log("   positionValue    : ", positionValue);
-
+        uint256 liquidationValue = Math.mulDiv(borrowFactor, borrowValue, 1e18); 
         
         require(
-            positionValue > Math.mulDiv(borrowFactor, borrowValue, 1e18),
+            positionValue > liquidationValue,
             "Lending: insufficient collateral"
         );
 
         // 추가해줘야함
-        uint24 deptTypeId = 131074;
+        uint24 debtTypeId = 8585218;
+
+        // console.log("liquidationModule", abi.encode(tokenId, amount, liquidationModule));
         uint256 debtId = tokenization.wrap(
-            deptTypeId,
+            debtTypeId,
             abi.encode(tokenId, amount, liquidationModule)
         );
+        borrows[debtId] = BorrowInfo(_asset, _amount, block.timestamp);
         console.log("debtId", debtId);
 
-        uint256 _tokenId = tokenId;
-        borrows[debtId] = BorrowInfo(_asset, _amount, block.timestamp);
-        (
-            uint256 collateralToken,
-            uint256 collateralAmount,
-            address liquidationModule
-        ) = debtNFT.tokenInfos(debtId);
-        console.log("collateralToken  ", collateralToken);
-        console.log("collateralAmount ", collateralAmount);
-        console.log("debt token       ", borrows[debtId].debtAsset);
-        console.log("debt amount      ", borrows[debtId].debtAmount);
-
-       
-
-        bytes memory triggerCalldata;
+        bytes memory performData;
         {
-
-            bytes memory liquidateCalldata = abi.encodePacked(
-                msgSender()
-            );
-
-            triggerCalldata = abi.encodeWithSignature(
+            performData = abi.encodeWithSignature(
                 "execute(address,uint256,bytes)",
-                liquidation,
+                liquidationModule,
                 debtId,
-                liquidateCalldata
+                ""
             );
         }
 
         uint256 stopLossLogicId = 1;
-        uint256 stopLoss = 1000000000;
-        bytes memory triggerCheckData = abi.encodePacked(stopLoss);
-
-
-        //  address owner,
-        // uint256 collateralToken,
-        // uint256 collateralAmount,
-        // uint256 triggerLogicId,
-        // bytes calldata triggerCheckData,
-        // address triggerTarget,
-        // bytes calldata triggerCalldata
-
+        // uint256 stopLoss = liquidationValue;
+        uint256 stopLoss = type(uint256).max;
+        bytes memory checkData = abi.encodeWithSignature(
+            "check(bytes)",
+            abi.encodePacked(debtId, uint256(1), stopLoss)
+        );
         trigger.registerTrigger(
             address(this),
-            _tokenId,
+            debtId,
             1,
             stopLossLogicId,
-            triggerCheckData,
+            checkData,
             liquidation,
-            triggerCalldata
+            performData
         );
 
         // 트리거의 오너만 트리거를 취소할 수 있게해야함. 오너를 설정할수 있게 해야함.
@@ -213,21 +186,15 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
             uint256 collateralAmount,
             address liquidationModule
         ) = debtNFT.tokenInfos(_debtId);
+        (address debtAsset, uint256 debtAmount) = getDebt(_debtId);
 
         tokenization.unwrap(_debtId, 1);
+        asset.safeTransferFrom(address(this), msg.sender, collateralToken, collateralAmount, "");
+        uint256 beforeAmount = asset.balanceOf(address(this), uint256(uint160(debtAsset)));
+        IBorrowable(msg.sender).repayCallback();
+        uint256 amount = asset.balanceOf(address(this), uint256(uint160(debtAsset))) - beforeAmount; 
 
-        (uint256 tokenId, uint256 amount) = IBorrowable(msgSender())
-            .repayCallback();
-        BorrowInfo storage borrowInfo = borrows[_debtId];
-
-        asset.safeTransferFrom(
-            msgSender(),
-            address(this),
-            uint256(uint160(borrowInfo.debtAsset)),
-            borrowInfo.debtAmount + calcFee(_debtId),
-            ""
-        );
-        require(uint256(uint160(borrowInfo.debtAsset)) == tokenId && borrowInfo.debtAmount <= amount,"Lending: insufficient collateral");
+        require(amount >= debtAmount,"Lending: insufficient collateral");
 
         borrows[_debtId].debtAmount = 0;
         borrows[_debtId].debtAsset = address(0);
@@ -246,6 +213,8 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
                 address liquidationModule
             ) = debtNFT.tokenInfos(_debtId);
 
+            asset.safeTransferFrom(msgSender(), address(this), _debtId, 1, "");
+
             tokenization.unwrap(_debtId, 1);
 
             BorrowInfo storage borrowInfo = borrows[_debtId];
@@ -255,6 +224,14 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
                 address(this),
                 uint256(uint160(borrowInfo.debtAsset)),
                 borrowInfo.debtAmount + calcFee(_debtId),
+                ""
+            );
+
+            asset.safeTransferFrom(
+                address(this), 
+                msgSender(), 
+                collateralToken, 
+                collateralAmount, 
                 ""
             );
 

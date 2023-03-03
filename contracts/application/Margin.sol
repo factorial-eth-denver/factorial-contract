@@ -6,14 +6,12 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "../../interfaces/IBorrowable.sol";
 import "../../contracts/valuation/wrapper/DebtNFT.sol";
-import "../../contracts/connector/SushiswapConnector.sol";
 import "./Lending.sol";
 
 contract Margin is IBorrowable, ERC1155, Ownable {
     // UniConnector public uni;
     DebtNFT public debtNFT;
     Lending public lending;
-    SushiswapConnector public sushi;
 
     BorrowCache public borrowCache;
     RepayCache public repayCache;
@@ -124,11 +122,10 @@ contract Margin is IBorrowable, ERC1155, Ownable {
     function repayCallback()
         public
         override
-        returns (uint256 dTokenId, uint256 dTokenAmount)
     {
         require(repayCache.init == true, "not repaid");
 
-        sushi.withdraw(repayCache.collateralAsset, repayCache.collateralAmount);
+        // sushi.withdraw(repayCache.collateralAsset, repayCache.collateralAmount);
         // 이렇게하면 어차피 NFT라서 liquidity갯수를 모르지 않나?
 
         // SushiPool memory pool = sushiPools[lpToPool[tokenId]];
