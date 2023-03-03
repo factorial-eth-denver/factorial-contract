@@ -74,6 +74,7 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), 0);
         uint left = asset.balanceOf(address(this), _yourToken);
         asset.safeTransferFrom(address(this), msgSender(), _yourToken, left, '');
+        asset.safeTransferFrom(address(this), msgSender(), _wantToken, _amount, '');
     }
 
     function sell(uint _yourToken, uint _wantToken, uint _amount, uint24) external override returns (int[] memory amounts){
@@ -86,6 +87,7 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         amounts[0] = int256(returnData[0]);
         amounts[1] = int256(returnData[1]);
         IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), 0);
+        asset.safeTransferFrom(address(this), msgSender(), _wantToken, _amount, '');
     }
 
     function mint(uint[] calldata _tokens, uint[] calldata _amounts) external override returns (uint) {
