@@ -7,7 +7,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 
 import "../../../interfaces/external/IUniswapV2Factory.sol";
 import "../../../interfaces/external/IUniswapV2Router.sol";
-import "../../../interfaces/external/IMasterChef.sol";
+import "../../../interfaces/external/IUniswapV2Pair.sol";
+import "../../../interfaces/external/IMiniChef.sol";
 import "../../../interfaces/IConnection.sol";
 import "../../../interfaces/IConnectionPool.sol";
 import "../../../interfaces/ITokenization.sol";
@@ -17,16 +18,18 @@ import "../../../interfaces/ISwapConnector.sol";
 
 import "../library/ConnectionBitmap.sol";
 import "../library/SafeCastUint256.sol";
+import "../library/Math.sol";
 import "../../utils/FactorialContext.sol";
 
 contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable, UUPSUpgradeable, FactorialContext {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeCastUint256 for uint;
     using ConnectionBitmap for mapping(uint24 => uint256);
+    using Math for uint256;
 
     ITokenization public tokenization;
     IConnectionPool public connectionPool;
-    IMasterChef public masterChef;
+    IMiniChef public miniChef;
     IUniswapV2Router public sushiRouter;
     IERC20Upgradeable public sushi;
 
@@ -49,69 +52,117 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         __Ownable_init();
         tokenization = ITokenization(_tokenization);
         connectionPool = IConnectionPool(_connectionPool);
-        masterChef = IMasterChef(_masterChef);
+        miniChef = IMiniChef(_masterChef);
         sushiRouter = IUniswapV2Router(_sushiRouter);
-        sushi = IERC20Upgradeable(masterChef.sushi());
+        sushi = IERC20Upgradeable(miniChef.SUSHI());
         wrapperTokenType = _wrapperTokenType;
     }
 
     function buy(uint _yourToken, uint _wantToken, uint _amount, uint24) external override returns (int[] memory amounts){
+        // 0. Get lp address
+        address lp = IUniswapV2Factory(sushiRouter.factory()).getPair(_yourToken.toAddress(), _wantToken.toAddress());
+
+        // 1. Calculate amount in
+        bool zeroToOne = false;
+        uint amountIn;
+        {
+            uint reserveIn;
+            uint reserveOut;
+            if (IUniswapV2Pair(lp).token0() == _yourToken.toAddress()) {
+                (reserveIn, reserveOut,) = IUniswapV2Pair(lp).getReserves();
+                zeroToOne = true;
+            } else {
+                (reserveOut, reserveIn,) = IUniswapV2Pair(lp).getReserves();
+            }
+            uint numerator = reserveIn * _amount * 1000;
+            uint denominator = (reserveOut - _amount) * 997;
+            amountIn = (numerator / denominator) + 1;
+        }
+
+        // 2. Swap
+        asset.safeTransferFrom(msgSender(), address(this), _yourToken, amountIn, '');
+        IERC20Upgradeable(_yourToken.toAddress()).transfer(lp, amountIn);
+        if (zeroToOne) {
+            IUniswapV2Pair(lp).swap(0, _amount, address(this), "");
+        } else {
+            IUniswapV2Pair(lp).swap(_amount, 0, address(this), "");
+        }
+
+        // Make return data
         amounts = new int[](2);
-        uint balance = asset.balanceOf(msgSender(), _yourToken);
-        asset.safeTransferFrom(msgSender(), address(this), _yourToken, balance, '');
-        address[] memory path = new address[](2);
-        (path[0], path[1]) = (_yourToken.toAddress(), _wantToken.toAddress());
-        IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), type(uint128).max);
-        uint[] memory returnData = sushiRouter.swapTokensForExactTokens(
-            _amount,
-            balance,
-            path,
-            address(this),
-            block.timestamp
-        );
-        amounts[0] = int256(returnData[0]);
-        amounts[1] = int256(returnData[1]);
-        IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), 0);
-        uint left = asset.balanceOf(address(this), _yourToken);
-        asset.safeTransferFrom(address(this), msgSender(), _yourToken, left, '');
+        amounts[0] = int256(amountIn) * - 1;
+        amounts[1] = int256(_amount);
         asset.safeTransferFrom(address(this), msgSender(), _wantToken, _amount, '');
     }
 
     function sell(uint _yourToken, uint _wantToken, uint _amount, uint24) external override returns (int[] memory amounts){
-        amounts = new int[](2);
+        // 0. Get lp address
+        address lp = IUniswapV2Factory(sushiRouter.factory()).getPair(_yourToken.toAddress(), _wantToken.toAddress());
+
+        // 1. Calculate amount out
+        bool zeroToOne = false;
+        uint amountOut;
+        {
+            uint reserveIn;
+            uint reserveOut;
+            if (IUniswapV2Pair(lp).token0() == _yourToken.toAddress()) {
+                (reserveIn, reserveOut,) = IUniswapV2Pair(lp).getReserves();
+                zeroToOne = true;
+            } else {
+                (reserveOut, reserveIn,) = IUniswapV2Pair(lp).getReserves();
+            }
+            uint amountInWithFee = _amount * 997;
+            uint numerator = amountInWithFee * reserveOut;
+            uint denominator = (reserveIn * 1000) + amountInWithFee;
+            amountOut = numerator / denominator;
+        }
+
+        // 2. Swap
         asset.safeTransferFrom(msgSender(), address(this), _yourToken, _amount, '');
-        address[] memory path = new address[](2);
-        (path[0], path[1]) = (_yourToken.toAddress(), _wantToken.toAddress());
-        IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), _amount);
-        uint[] memory returnData = sushiRouter.swapExactTokensForTokens(_amount, 1, path, address(this), block.timestamp);
-        amounts[0] = int256(returnData[0]);
-        amounts[1] = int256(returnData[1]);
-        IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), 0);
-        asset.safeTransferFrom(address(this), msgSender(), _wantToken, _amount, '');
+        IERC20Upgradeable(_yourToken.toAddress()).transfer(lp, _amount);
+        if (zeroToOne) {
+            IUniswapV2Pair(lp).swap(0, amountOut, address(this), "");
+        } else {
+            IUniswapV2Pair(lp).swap(amountOut, 0, address(this), "");
+        }
+
+        // 3. Make return data
+        amounts = new int[](2);
+        amounts[0] = int256(_amount) * - 1;
+        amounts[1] = int256(amountOut);
+        asset.safeTransferFrom(address(this), msgSender(), _wantToken, amountOut, '');
     }
 
     function mint(uint[] calldata _tokens, uint[] calldata _amounts) external override returns (uint) {
+        // 0. Validate params
         require(_tokens.length == 2 && _amounts.length == 2, 'Invalid params');
+
+        // 1. Before mint
         asset.safeBatchTransferFrom(msgSender(), address(this), _tokens, _amounts, '');
-        IERC20Upgradeable(_tokens[0].toAddress()).approve(address(masterChef), _amounts[0]);
-        IERC20Upgradeable(_tokens[1].toAddress()).approve(address(masterChef), _amounts[1]);
+        IERC20Upgradeable(_tokens[0].toAddress()).approve(address(sushiRouter), _amounts[0]);
+        IERC20Upgradeable(_tokens[1].toAddress()).approve(address(sushiRouter), _amounts[1]);
+
+        // 2. Do mint
         (uint amountA, uint amountB, uint liquidity) = sushiRouter.addLiquidity(
             _tokens[0].toAddress(), _tokens[1].toAddress(), _amounts[0], _amounts[1], 0, 0, address(this), block.timestamp
         );
+
+        // 3. After mint
         address lp = IUniswapV2Factory(sushiRouter.factory()).getPair(_tokens[0].toAddress(), _tokens[1].toAddress());
         asset.safeTransferFrom(address(this), msgSender(), lp, liquidity);
         if (amountA < _amounts[0]) asset.safeTransferFrom(address(this), msgSender(), _tokens[0], _amounts[0] - amountA, '');
         if (amountB < _amounts[1]) asset.safeTransferFrom(address(this), msgSender(), _tokens[1], _amounts[1] - amountB, '');
-        // for gas refund
-        IERC20Upgradeable(_tokens[0].toAddress()).approve(address(masterChef), 0);
-        IERC20Upgradeable(_tokens[1].toAddress()).approve(address(masterChef), 0);
+
+        // 4. Reset approval
+        IERC20Upgradeable(_tokens[0].toAddress()).approve(address(sushiRouter), 0);
+        IERC20Upgradeable(_tokens[1].toAddress()).approve(address(sushiRouter), 0);
         return liquidity;
     }
 
     function burn(uint[] calldata _tokens, uint _amount) external override returns (uint, uint) {
         require(_tokens.length == 2, 'Invalid params');
         address lp = IUniswapV2Factory(sushiRouter.factory()).getPair(_tokens[0].toAddress(), _tokens[1].toAddress());
-        IERC20Upgradeable(lp).approve(address(masterChef), _amount);
+        IERC20Upgradeable(lp).approve(address(sushiRouter), _amount);
         asset.safeTransferFrom(msgSender(), address(this), lp, _amount);
         (uint amountA, uint amountB) = sushiRouter.removeLiquidity(
             _tokens[0].toAddress(), _tokens[1].toAddress(), _amount, 0, 0, address(this), block.timestamp
@@ -121,14 +172,13 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         return (amountA, amountB);
     }
 
-    function depositNew(uint _pid, uint _amount) external override returns (uint){
+    function depositNew(uint256 _pid, uint256 _amount) external override returns (uint){
         uint24 connectionId = occupyConnection();
         address connection = connectionPool.getConnectionAddress(connectionId);
         bytes memory callData = abi.encodeWithSignature(
             "deposit(uint256,uint256,address,address,address,address)",
-            _pid, _amount, address(asset), address(masterChef), address(sushi), msgSender()
+            _pid, _amount, address(asset), address(miniChef), address(sushi), msgSender()
         );
-        console.log(connection);
         IConnection(connection).execute(address(this), callData);
         uint tokenId = (wrapperTokenType << 232) + (uint256(connectionId) << 80) + (_pid);
         asset.mint(msgSender(), tokenId, 1);
@@ -142,16 +192,16 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         address connection = connectionPool.getConnectionAddress(connectionId);
         bytes memory callData = abi.encodeWithSignature(
             "deposit(uint256,uint256,address,address,address,address)",
-            pid, _amount, address(asset), address(masterChef), address(sushi), msgSender()
+            pid, _amount, address(asset), address(miniChef), address(sushi), msgSender()
         );
         IConnection(connection).execute(address(this), callData);
     }
 
     function deposit(uint _pid, uint _amount, address _asset, address _masterChef, address _sushi, address _caller) external {
-        (address lp, , ,) = IMasterChef(_masterChef).poolInfo(_pid);
+        address lp = IMiniChef(_masterChef).lpToken(_pid);
         IAsset(_asset).safeTransferFrom(_caller, address(this), lp, _amount);
         IERC20Upgradeable(lp).approve(_masterChef, _amount);
-        IMasterChef(_masterChef).deposit(_pid, _amount);
+        IMiniChef(_masterChef).deposit(_pid, _amount, address(this));
         IAsset(_asset).safeTransferFrom(
             address(this), _caller, _sushi, IERC20Upgradeable(_sushi).balanceOf(address(this))
         );
@@ -165,10 +215,10 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         require(!connectionBitMap.isEmpty(connectionId), 'Empty connection');
         bytes memory callData = abi.encodeWithSignature(
             "withdraw(uint256,uint256,address,address,address,address)",
-            pid, _amount, address(asset), address(masterChef), address(sushi), msgSender()
+            pid, _amount, address(asset), address(miniChef), address(sushi), msgSender()
         );
         IConnection(connection).execute(address(this), callData);
-        (uint amount,) = masterChef.userInfo(pid, connection);
+        (uint amount,) = miniChef.userInfo(pid, connection);
         if (amount == 0) {
             asset.burn(msgSender(), _tokenId, 1);
             connectionBitMap.release(connectionId);
@@ -176,8 +226,8 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
     }
 
     function withdraw(uint _pid, uint _amount, address _asset, address _masterChef, address _sushi, address _caller) external {
-        (address lp, , ,) = IMasterChef(_masterChef).poolInfo(_pid);
-        IMasterChef(_masterChef).withdraw(_pid, _amount);
+        address lp = IMiniChef(_masterChef).lpToken(_pid);
+        IMiniChef(_masterChef).withdraw(_pid, _amount, address(this));
         IAsset(_asset).safeTransferFrom(
             address(this), _caller, _sushi, IERC20Upgradeable(_sushi).balanceOf(address(this))
         );
@@ -205,5 +255,54 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         uint24 connectionId = connectionBitMap.findFirstEmptySpace(connectionPool.getConnectionMax() / 256);
         connectionBitMap.occupy(connectionId);
         return connectionId;
+    }
+
+    function getReserves(uint _tokenA, uint _tokenB) public returns (uint, uint){
+        (uint112 reserveA, uint112 reserveB,) = IUniswapV2Pair(getLP(_tokenA, _tokenB).toAddress()).getReserves();
+        return (uint256(reserveA), uint256(reserveB));
+    }
+
+    function optiamlSwapAmount(
+        uint tokenA,
+        uint tokenB,
+        uint amountA,
+        uint amountB
+    ) external returns (uint swapAmt, bool isReversed) {
+        (uint reserveA, uint reserveB) = getReserves(tokenA, tokenB);
+        return optimalDeposit(amountA, amountB, reserveA, reserveB);
+    }
+
+    function optimalDeposit(
+        uint amtA,
+        uint amtB,
+        uint resA,
+        uint resB
+    ) internal pure returns (uint swapAmt, bool isReversed) {
+        if (amtA * resB >= amtB * resA) {
+            swapAmt = _optimalDepositA(amtA, amtB, resA, resB);
+            isReversed = false;
+        } else {
+            swapAmt = _optimalDepositA(amtB, amtA, resB, resA);
+            isReversed = true;
+        }
+    }
+
+    /// Formula: https://blog.alphafinance.io/byot/
+    function _optimalDepositA(
+        uint amtA,
+        uint amtB,
+        uint resA,
+        uint resB
+    ) internal pure returns (uint) {
+        require(amtA * resB >= amtB * resA, 'Reversed');
+        uint a = 997;
+        uint b = uint(1997) * resA;
+        uint _c = (amtA * resB) - (amtB * resA);
+        uint c = (_c * 1000) / (amtB + resB) * resA;
+        uint d = a * c * 4;
+        uint e = Math.sqrt(b * b + d);
+        uint numerator = e - b;
+        uint denominator = a * 2;
+        return numerator / denominator;
     }
 }

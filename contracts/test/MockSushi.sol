@@ -3,16 +3,16 @@ pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-import "../../interfaces/external/IMasterChef.sol";
+import "../../interfaces/external/IMiniChef.sol";
 
-contract MockSushi is IMasterChef {
-    address public sushi;
-    address public lpToken;
+contract MockSushi is IMiniChef {
+    address public SUSHI;
+    address public mockLpToken;
     uint public amount;
 
     constructor(address _sushi, address _lpToken) {
-        sushi = _sushi;
-        lpToken = _lpToken;
+        SUSHI = _sushi;
+        mockLpToken = _lpToken;
     }
 
     /// Mock Router
@@ -43,18 +43,22 @@ contract MockSushi is IMasterChef {
     }
 
     /// Mock Master Chef
-    function poolInfo(uint pid) external view override returns (address, uint, uint, uint) {
-        return (lpToken, 0, 0, 0);
+    function poolInfo(uint pid) external view override returns (uint, uint, uint) {
+        return (0, 0, 0);
     }
 
-    function deposit(uint, uint _amount) external override {
+    function lpToken(uint pid) external view override returns (address) {
+        return mockLpToken;
+    }
+
+    function deposit(uint, uint _amount, address) external override {
         amount += _amount;
-        IERC20(lpToken).transferFrom(msg.sender, address(this), _amount);
+        IERC20(mockLpToken).transferFrom(msg.sender, address(this), _amount);
     }
 
-    function withdraw(uint, uint _amount) external override {
+    function withdraw(uint, uint _amount, address) external override {
         amount -= _amount;
-        IERC20(lpToken).transfer(msg.sender, _amount);
+        IERC20(mockLpToken).transfer(msg.sender, _amount);
     }
 
     function userInfo(uint pid, address user) external view returns (uint amount, uint rewardDebt) {

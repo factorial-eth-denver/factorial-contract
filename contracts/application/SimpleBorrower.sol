@@ -114,7 +114,7 @@ contract SimpleBorrower is IBorrowable, ERC1155HolderUpgradeable, FactorialConte
             repayCache.collateralAmount
         );
 
-        for (uint256 i = 0; i < tokens.length; i++) {
+        for (uint256 i = 0; i < tokens.length; ++i) {
             if (tokens[i] == uint256(uint160(repayCache.debtAsset))) {
                 if (repayCache.debtAmount > amounts[i]) {
                     asset.safeTransferFrom(

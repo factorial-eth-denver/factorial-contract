@@ -90,7 +90,7 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable,
     function getValue(uint _tokenId, uint) public view override returns (uint){
         SynthNFT memory token = tokenInfos[_tokenId];
         uint totalValue = 0;
-        for (uint i = 0; i < token.underlyingTokens.length; i ++) {
+        for (uint i = 0; i < token.underlyingTokens.length; ++i) {
             totalValue += tokenization.getValue(token.underlyingTokens[i], token.underlyingAmounts[i]);
         }
         return totalValue;
@@ -102,7 +102,7 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable,
     function getValueAsCollateral(address _lendingProtocol, uint _tokenId, uint) public view override returns (uint) {
         SynthNFT memory token = tokenInfos[_tokenId];
         uint totalValue = 0;
-        for (uint i = 0; i < token.underlyingTokens.length; i ++) {
+        for (uint i = 0; i < token.underlyingTokens.length; ++i) {
             totalValue += tokenization.getValueAsCollateral(
                 _lendingProtocol,
                 token.underlyingTokens[i],
@@ -118,7 +118,7 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable,
     function getValueAsDebt(address _lendingProtocol, uint _tokenId, uint) public view override returns (uint) {
         SynthNFT memory token = tokenInfos[_tokenId];
         uint totalValue = 0;
-        for (uint i = 0; i < token.underlyingTokens.length; i ++) {
+        for (uint i = 0; i < token.underlyingTokens.length; ++i) {
             totalValue += tokenization.getValueAsDebt(
                 _lendingProtocol,
                 token.underlyingTokens[i],

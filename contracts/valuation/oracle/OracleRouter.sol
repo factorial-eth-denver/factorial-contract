@@ -19,7 +19,7 @@ contract OracleRouter is IPriceOracle, OwnableUpgradeable, UUPSUpgradeable {
     /// ----- ADMIN FUNCTIONS -----
     function setRoute(address[] calldata tokens, address[] calldata targetOracles) external onlyOwner {
         require(tokens.length == targetOracles.length, 'inconsistent length');
-        for (uint i = 0; i < tokens.length; i++) {
+        for (uint i = 0; i < tokens.length; ++i) {
             oracles[tokens[i]] = targetOracles[i];
         }
     }

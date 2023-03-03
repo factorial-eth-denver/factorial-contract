@@ -37,7 +37,7 @@ contract Liquidation is IRepayable, OwnableUpgradeable, FactorialContext, ERC115
     }
 
     function addModules(address[] calldata liquidationModules) public onlyOwner {
-        for (uint256 i = 0; i < liquidationModules.length; i++) {
+        for (uint256 i = 0; i < liquidationModules.length; ++i) {
             modules[liquidationModules[i]] = ILiquidationModule(
                 liquidationModules[i]
             );
@@ -107,7 +107,7 @@ contract Liquidation is IRepayable, OwnableUpgradeable, FactorialContext, ERC115
             ""
         );
 
-        for (uint256 i = 0; i < inAccounts.length; i++) {
+        for (uint256 i = 0; i < inAccounts.length; ++i) {
             asset.safeTransferFrom(
                 inAccounts[i],
                 address(this),
@@ -119,7 +119,7 @@ contract Liquidation is IRepayable, OwnableUpgradeable, FactorialContext, ERC115
 
         lending.repayAndCallback(positionId);
 
-        for (uint256 i = 0; i < outAccounts.length; i++) {
+        for (uint256 i = 0; i < outAccounts.length; ++i) {
             asset.safeTransferFrom(
                 address(this),
                 outAccounts[i],

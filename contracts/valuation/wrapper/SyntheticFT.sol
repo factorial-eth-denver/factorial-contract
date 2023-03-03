@@ -65,7 +65,7 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
         // 2. Store states
         SynthFT storage ft = tokenInfos[tokenId];
         ft.totalSupply += mintAmount;
-        for (uint i = 0; i < tokens.length; i ++) {
+        for (uint i = 0; i < tokens.length; ++i) {
             if (ft.underlyingTokens.length <= i) {
                 ft.underlyingTokens.push(tokens[i]);
                 ft.underlyingAmounts.push(amounts[i]);
@@ -91,7 +91,7 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
         // 0. Calculate portion of underlying asset
         SynthFT memory ft = tokenInfos[_tokenId];
         uint256[] memory amounts = new uint256[](ft.underlyingAmounts.length);
-        for (uint i = 0; i < amounts.length; i++) {
+        for (uint i = 0; i < amounts.length; ++i) {
             amounts[i] = ft.underlyingAmounts[i] * _amount / ft.totalSupply;
             ft.underlyingAmounts[i] -= amounts[i];
         }
@@ -112,7 +112,7 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
     function getValue(uint _tokenId, uint _amount) public view override returns (uint){
         SynthFT memory token = tokenInfos[_tokenId];
         uint totalValue = 0;
-        for (uint i = 0; i < token.underlyingTokens.length; i ++) {
+        for (uint i = 0; i < token.underlyingTokens.length; ++i) {
             totalValue += tokenization.getValue(token.underlyingTokens[i], token.underlyingAmounts[i]);
         }
         return totalValue * _amount / token.totalSupply;
@@ -129,7 +129,7 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
     ) public view override returns (uint) {
         SynthFT memory token = tokenInfos[_tokenId];
         uint totalValue = 0;
-        for (uint i = 0; i < token.underlyingTokens.length; i ++) {
+        for (uint i = 0; i < token.underlyingTokens.length; ++i) {
             totalValue += tokenization.getValueAsCollateral(
                 _lendingProtocol,
                 token.underlyingTokens[i],
@@ -150,7 +150,7 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
     ) public view override returns (uint) {
         SynthFT memory token = tokenInfos[_tokenId];
         uint totalValue = 0;
-        for (uint i = 0; i < token.underlyingTokens.length; i ++) {
+        for (uint i = 0; i < token.underlyingTokens.length; ++i) {
             totalValue += tokenization.getValueAsDebt(
                 _lendingProtocol,
                 token.underlyingTokens[i],
