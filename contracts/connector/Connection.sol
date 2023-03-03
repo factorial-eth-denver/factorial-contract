@@ -4,8 +4,13 @@ pragma solidity ^0.8.0;
 import "../../interfaces/IConnection.sol";
 import "../../interfaces/IConnectionPool.sol";
 
+import "hardhat/console.sol";
 contract Connection is IConnection{
     IConnectionPool public connectionPool;
+
+    constructor() {
+        connectionPool = IConnectionPool(msg.sender);
+    }
 
     /// @dev Throws if called by not router.
     modifier checkAuth() {
@@ -25,7 +30,7 @@ contract Connection is IConnection{
                     revert(add(32, returndata), returndata_size)
                 }
             } else {
-                revert('bad execute call');
+                revert('bad connection call');
             }
         }
         return returndata;

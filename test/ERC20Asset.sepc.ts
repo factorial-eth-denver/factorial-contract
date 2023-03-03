@@ -1,5 +1,6 @@
 import {ethers} from 'hardhat';
 import {
+    ConnectionPool,
     DebtNFT,
     ERC20Asset,
     MockERC20,
@@ -22,6 +23,7 @@ describe('ERC20Asset wrapper unit test', () => {
     let erc20Asset: ERC20Asset
     let syntheticFT: SyntheticFT
     let syntheticNFT: SyntheticNFT
+    let connectionPool: ConnectionPool
     let helper: TestHelper
 
     before('load fixture', async () => {
@@ -34,6 +36,7 @@ describe('ERC20Asset wrapper unit test', () => {
             erc20Asset,
             syntheticFT,
             syntheticNFT,
+            connectionPool,
             helper
         } = await loadFixture(factorialFixture));
     })

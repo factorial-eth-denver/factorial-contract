@@ -16,6 +16,7 @@ import "../../../interfaces/ILiquidation.sol";
 import "../../../interfaces/IAsset.sol";
 import "../../connector/library/SafeCastUint256.sol";
 
+import "hardhat/console.sol";
 contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using MathUpgradeable for uint256;
@@ -35,7 +36,7 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
     mapping(uint256 => DebtToken) public tokenInfos;
     ITokenization public tokenization;
     IAsset public asset;
-    uint256 private sequentialN;
+    uint256 public sequentialN;
 
     /// @dev Throws if called by not valuation module.
     modifier onlyTokenization() {

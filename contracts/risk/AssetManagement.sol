@@ -124,6 +124,9 @@ contract AssetManagement is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradea
             _from == _msgSender() || _from == cache.caller,
             "ERC1155: caller is not token owner or caller or factorial"
         );
+        if (_amount == 0) {
+            return;
+        }
         if (_from == cache.caller) {
             cache.inputValue += tokenization.getValue(_id, _amount);
         } else if (_to == cache.caller) {
@@ -175,6 +178,9 @@ contract AssetManagement is ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradea
         for (uint i = 0; i < _ids.length; i++) {
             uint id = _ids[i];
             uint amount = _amounts[i];
+            if(amount == 0) {
+                continue;
+            }
             if (_from == cache.caller) {
                 cache.inputValue += tokenization.getValue(id, amount);
             } else if (_to == cache.caller) {
