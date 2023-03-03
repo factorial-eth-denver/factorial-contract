@@ -17,7 +17,8 @@ import {
 import {
     DEBT_NFT_TOKEN_TYPE,
     SYNTHETIC_FT_TOKEN_TYPE,
-    SYNTHETIC_NFT_TOKEN_TYPE
+    SYNTHETIC_NFT_TOKEN_TYPE,
+    SUSHI_NFT_TOKEN_TYPE
 } from "../shared/constants";
 import {address} from "hardhat/internal/core/config/config-validation";
 
@@ -147,10 +148,18 @@ const factorialFixture: Fixture<{
     await simplePriceOracle.setPrice(weth.address, '2000');
     await simplePriceOracle.setPrice(usdc.address, '1000000000000');
 
+
     await tokenization.registerTokenType(0, erc20Asset.address);
+    await tokenization.setGuideTokenFactor(weth.address.toString(), 9000, 11000);
+    await tokenization.setGuideTokenFactor(usdc.address.toString(), 9000, 11000);
     await tokenization.registerTokenType(DEBT_NFT_TOKEN_TYPE, debtNFT.address);
+    await tokenization.setGuideTokenFactor(DEBT_NFT_TOKEN_TYPE, 9000, 11000);
     await tokenization.registerTokenType(SYNTHETIC_FT_TOKEN_TYPE, syntheticFT.address);
+    await tokenization.setGuideTokenFactor(SYNTHETIC_FT_TOKEN_TYPE, 9000, 11000);
     await tokenization.registerTokenType(SYNTHETIC_NFT_TOKEN_TYPE, syntheticNFT.address);
+    await tokenization.setGuideTokenFactor(SYNTHETIC_NFT_TOKEN_TYPE, 9000, 11000);
+    await tokenization.registerTokenType(SUSHI_NFT_TOKEN_TYPE, syntheticNFT.address);
+    await tokenization.setGuideTokenFactor(SUSHI_NFT_TOKEN_TYPE, 9000, 11000);
 
     await asset.registerFactorialModules([
         router.address,

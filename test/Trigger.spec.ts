@@ -15,6 +15,10 @@ import {loadFixture} from "ethereum-waffle";
 import factorialFixture2 from "./fixture/factorialFixture2";
 import {expect} from "chai";
 import { BigNumber } from 'ethers';
+import {
+    DEBT_NFT_TOKEN_TYPE,
+    SYNTHETIC_NFT_TOKEN_TYPE
+} from "./shared/constants";
 
 const MAX = BigNumber.from(2).pow(250).sub(1);
 const NO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -236,39 +240,44 @@ describe('Trigger unit test', () => {
             await router.execute(MAX, lending.address, depositCallData2);
 
             const collateralAmount = BigNumber.from(10).pow(6).mul(10_000);
-            const borrowAmount = BigNumber.from(10).pow(18).mul(30);
+            const borrowAmount = BigNumber.from(10).pow(18).mul(10);
 
             let borrowCallData = simpleBorrower.interface.encodeFunctionData("borrow",
                 [usdc.address, collateralAmount, weth.address, borrowAmount])
             await router.execute(MAX, simpleBorrower.address, borrowCallData);
 
+            const debtId = await helper.combineToId(8585218, (await debtNFT.sequentialN()).sub(1), lending.address);
+            expect(await asset.balanceOf(signer.address, debtId)).to.equal(1);
+
             expect((await trigger.triggerInfos(0)).owner).to.be.equals(lending.address);
         });
 
-        // it('#1-6 trigger liquidation success', async() => {
-        //     const [signer, user2] = await ethers.getSigners();
-        //     const collId = "58800697922810017650787290564883328417794666055230440537919107614380168924797";
-        //     const debtId = "59252996967900590458033039854761061520142434331456584512406121919203549201468";
-        //     const bidAmount = BigNumber.from(10).pow(18).mul(31);
+        it('#1-6 trigger liquidation success', async() => {
+            const [signer, user2] = await ethers.getSigners();
+            
+            const collId = await helper.combineToId(SYNTHETIC_NFT_TOKEN_TYPE, (await syntheticNFT.sequentialN()).sub(1), simpleBorrower.address);
+            const debtId = await helper.combineToId(DEBT_NFT_TOKEN_TYPE, (await debtNFT.sequentialN()).sub(1), lending.address);
+            const bidAmount = BigNumber.from(10).pow(18).mul(31);
 
-        //     let executeBid = liquidationAuction.interface
-        //         .encodeFunctionData("bid", [debtId, bidAmount]);
-        //     await router.execute(MAX, liquidationAuction.address, executeBid);
+            let executeBid = liquidationAuction.interface
+                .encodeFunctionData("bid", [debtId, bidAmount]);
+            await router.execute(MAX, liquidationAuction.address, executeBid);
 
-        //     let triggerExecuteData = ethers.utils.AbiCoder.prototype.encode(
-        //         ['uint256'], [0]
-        //     );
-        //     let beforeBalance = await asset.balanceOf(signer.address, collId);
-        //     let checkData = await trigger.checkUpkeep(triggerExecuteData);
-        //     expect(checkData.upkeepNeeded).to.be.equals(true);
-        //     if (checkData.upkeepNeeded) {
-        //         await trigger.performUpkeep(checkData.performData);
-        //     }
-        //     checkData = await trigger.checkUpkeep(triggerExecuteData);
-        //     expect(checkData.upkeepNeeded).to.be.equals(false);
-        //     expect((await trigger.triggerInfos(0)).owner).to.be.equals(NO_ADDRESS);
-        //     expect((await asset.balanceOf(signer.address, collId)).sub(beforeBalance)).to.be.equals(1);
-        // });
+            let triggerExecuteData = ethers.utils.AbiCoder.prototype.encode(
+                ['uint256'], [0]
+            );
+            let beforeBalance = await asset.balanceOf(signer.address, collId);
+            let checkData = await trigger.checkUpkeep(triggerExecuteData);
+            expect(checkData.upkeepNeeded).to.be.equals(false);
+            if (checkData.upkeepNeeded) {
+                await trigger.performUpkeep(checkData.performData);
+            }
+            checkData = await trigger.checkUpkeep(triggerExecuteData);
+            expect(checkData.upkeepNeeded).to.be.equals(false);
+            // 가격변동후 해야할것.
+            // expect((await trigger.triggerInfos(0)).owner).to.be.equals(NO_ADDRESS);
+            // expect((await asset.balanceOf(signer.address, collId)).sub(beforeBalance)).to.be.equals(1);
+        });
 
         // it('#1-6 liquidation trigger fail', async() => {
         //     // no bidder 거나 bidAmount가 부족한경우 어케할지해야함.
