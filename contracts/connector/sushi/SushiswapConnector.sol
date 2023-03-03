@@ -54,7 +54,7 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         connectionPool = IConnectionPool(_connectionPool);
         miniChef = IMiniChef(_masterChef);
         sushiRouter = IUniswapV2Router(_sushiRouter);
-        sushi = IERC20Upgradeable(miniChef.sushi());
+        sushi = IERC20Upgradeable(miniChef.SUSHI());
         wrapperTokenType = _wrapperTokenType;
     }
 

@@ -32,7 +32,7 @@ contract SushiswapV2NFT is OwnableUpgradeable, IWrapper {
         __Ownable_init();
         tokenization = ITokenization(_tokenization);
         farm = IMiniChef(_farm);
-        sushi = IERC20Upgradeable(farm.sushi());
+        sushi = IERC20Upgradeable(farm.SUSHI());
     }
 
     function wrap(address, uint24, bytes calldata) external pure override returns (uint) {

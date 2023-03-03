@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 interface IMiniChef {
-    function sushi() external view returns (address);
+    function SUSHI() external view returns (address);
 
     function poolInfo(uint pid)
     external

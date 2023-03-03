@@ -26,6 +26,9 @@ const config: HardhatUserConfig = {
           mining: {
               auto: true,
               interval: 2000,
+          },
+          forking: {
+              url: "https://polygon-rpc.com"
           }
       },
       polygon: {

@@ -6,12 +6,12 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import "../../interfaces/external/IMiniChef.sol";
 
 contract MockSushi is IMiniChef {
-    address public sushi;
+    address public SUSHI;
     address public mockLpToken;
     uint public amount;
 
     constructor(address _sushi, address _lpToken) {
-        sushi = _sushi;
+        SUSHI = _sushi;
         mockLpToken = _lpToken;
     }
 
