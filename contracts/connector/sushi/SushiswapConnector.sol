@@ -19,7 +19,6 @@ import "../library/ConnectionBitmap.sol";
 import "../library/SafeCastUint256.sol";
 import "../../utils/FactorialContext.sol";
 
-import "hardhat/console.sol";
 contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable, UUPSUpgradeable, FactorialContext {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeCastUint256 for uint;
@@ -56,24 +55,36 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         wrapperTokenType = _wrapperTokenType;
     }
 
-    function buy(uint _yourToken, uint _wantToken, uint _amount, uint24) external override {
+    function buy(uint _yourToken, uint _wantToken, uint _amount, uint24) external override returns (int[] memory amounts){
+        amounts = new int[](2);
         uint balance = asset.balanceOf(msgSender(), _yourToken);
         asset.safeTransferFrom(msgSender(), address(this), _yourToken, balance, '');
         address[] memory path = new address[](2);
         (path[0], path[1]) = (_yourToken.toAddress(), _wantToken.toAddress());
         IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), type(uint128).max);
-        sushiRouter.swapTokensForExactTokens(_amount, balance, path, address(this), block.timestamp);
+        uint[] memory returnData = sushiRouter.swapTokensForExactTokens(
+            _amount,
+            balance,
+            path,
+            address(this),
+            block.timestamp
+        );
+        amounts[0] = int256(returnData[0]);
+        amounts[1] = int256(returnData[1]);
         IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), 0);
         uint left = asset.balanceOf(address(this), _yourToken);
         asset.safeTransferFrom(address(this), msgSender(), _yourToken, left, '');
     }
 
-    function sell(uint _yourToken, uint _wantToken, uint _amount, uint24) external override {
+    function sell(uint _yourToken, uint _wantToken, uint _amount, uint24) external override returns (int[] memory amounts){
+        amounts = new int[](2);
         asset.safeTransferFrom(msgSender(), address(this), _yourToken, _amount, '');
         address[] memory path = new address[](2);
         (path[0], path[1]) = (_yourToken.toAddress(), _wantToken.toAddress());
         IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), _amount);
-        sushiRouter.swapExactTokensForTokens(_amount, 1, path, address(this), block.timestamp);
+        uint[] memory returnData = sushiRouter.swapExactTokensForTokens(_amount, 1, path, address(this), block.timestamp);
+        amounts[0] = int256(returnData[0]);
+        amounts[1] = int256(returnData[1]);
         IERC20Upgradeable(_yourToken.toAddress()).approve(address(sushiRouter), 0);
     }
 
@@ -109,7 +120,6 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
     }
 
     function depositNew(uint _pid, uint _amount) external override returns (uint){
-        console.log("1");
         uint24 connectionId = occupyConnection();
         address connection = connectionPool.getConnectionAddress(connectionId);
         bytes memory callData = abi.encodeWithSignature(

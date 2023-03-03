@@ -97,7 +97,13 @@ contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, Factori
         IERC20Upgradeable(cache.token1.toAddress()).safeTransfer(cache.currentSwapPool, uint256(_amount1Delta));
     }
 
-    function buy(uint256 _yourToken, uint256 _wantToken, uint256 _amount, uint24 _fee) external override {
+    function buy(
+        uint256 _yourToken,
+        uint256 _wantToken,
+        uint256 _amount,
+        uint24 _fee
+    ) external override returns(int[] memory amounts){
+        amounts = new int[](2);
         cache.currentSwapPool = factory.getPool(_yourToken.toAddress(), _wantToken.toAddress(), _fee);
         bool zeroForOne = (_yourToken.toAddress() == IUniswapV3Pool(cache.currentSwapPool).token0()) ? true : false;
         if (zeroForOne) {
@@ -108,7 +114,7 @@ contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, Factori
             cache.token1 = _yourToken;
         }
 
-        IUniswapV3Pool(cache.currentSwapPool).swap(
+        (amounts[0], amounts[1]) = IUniswapV3Pool(cache.currentSwapPool).swap(
             address(this),
             zeroForOne,
             int256(_amount) * (- 1),
@@ -120,7 +126,13 @@ contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, Factori
         cache.token1 = 0;
     }
 
-    function sell(uint _yourToken, uint _wantToken, uint _amount, uint24 _fee) external override {
+    function sell(
+        uint _yourToken,
+        uint _wantToken,
+        uint _amount,
+        uint24 _fee
+    ) external override returns (int[] memory amounts){
+        amounts = new int[](2);
         cache.currentSwapPool = factory.getPool(_yourToken.toAddress(), _wantToken.toAddress(), _fee);
         bool zeroForOne = (_yourToken.toAddress() == IUniswapV3Pool(cache.currentSwapPool).token0()) ? true : false;
         if (zeroForOne) {
@@ -131,7 +143,7 @@ contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, Factori
             cache.token1 = _yourToken;
         }
 
-        IUniswapV3Pool(cache.currentSwapPool).swap(
+        (amounts[0], amounts[1]) = IUniswapV3Pool(cache.currentSwapPool).swap(
             address(this),
             zeroForOne,
             int256(_amount),
