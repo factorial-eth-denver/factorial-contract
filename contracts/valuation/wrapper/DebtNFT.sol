@@ -14,10 +14,13 @@ import "../../../interfaces/ILending.sol";
 import "../../../interfaces/ITrigger.sol";
 import "../../../interfaces/ILiquidation.sol";
 import "../../../interfaces/IAsset.sol";
+import "../../utils/FactorialContext.sol";
+
 import "../../connector/library/SafeCastUint256.sol";
 
 import "hardhat/console.sol";
-contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
+
+contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper, FactorialContext {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using MathUpgradeable for uint256;
 
@@ -35,7 +38,6 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
     mapping(address => TokenFactors) public tokenFactors; // Mapping from token address to oracle info.
     mapping(uint256 => DebtToken) public tokenInfos;
     ITokenization public tokenization;
-    IAsset public asset;
     uint256 public sequentialN;
 
     /// @dev Throws if called by not valuation module.
@@ -44,10 +46,9 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper {
         _;
     }
 
-    function initialize(address _tokenization, address _asset) public initializer {
+    function initialize(address _tokenization, address _asset) public initializer initContext(_asset) {
         __Ownable_init();
         tokenization = ITokenization(_tokenization);
-        asset = IAsset(_asset);
     }
 
     function wrap(
