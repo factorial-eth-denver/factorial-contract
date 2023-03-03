@@ -62,32 +62,12 @@ contract SushiswapV2NFT is OwnableUpgradeable, IWrapper {
     }
 
     function getValueAsCollateral(address _lendingProtocol, uint256 tokenId, uint256 amount) public view override returns (uint){
-        SushiFarmingNFT memory token = tokenInfos[tokenId];
-        (address lpToken, , ,) = farm.poolInfo(token.poolId);
-        address token0 = IUniswapV2Pair(lpToken).token0();
-        address token1 = IUniswapV2Pair(lpToken).token1();
-        uint totalSupply = IUniswapV2Pair(lpToken).totalSupply();
-        (uint r0, uint r1,) = IUniswapV2Pair(lpToken).getReserves();
-        uint sqrtK = r0 * (r1.sqrt()) * (2 ** 112) / totalSupply;
-        uint px0 = tokenization.getValueAsCollateral(_lendingProtocol, uint256(uint160(token0)), 1e18);
-        uint px1 = tokenization.getValueAsCollateral(_lendingProtocol, uint256(uint160(token1)), 1e18);
-        return sqrtK * 2 * (px0.sqrt()) / (2 ** 56) * (px1.sqrt()) / (2 ** 56) * amount;
+        return getValue(tokenId, amount);
     }
 
     function getValueAsDebt(address _lendingProtocol, uint256 tokenId, uint256 amount) public view override returns (uint){
-        SushiFarmingNFT memory token = tokenInfos[tokenId];
-        (address lpToken, , ,) = farm.poolInfo(token.poolId);
-        address token0 = IUniswapV2Pair(lpToken).token0();
-        address token1 = IUniswapV2Pair(lpToken).token1();
-        uint totalSupply = IUniswapV2Pair(lpToken).totalSupply();
-        (uint r0, uint r1,) = IUniswapV2Pair(lpToken).getReserves();
-        uint sqrtK = r0 * (r1.sqrt()) * (2 ** 112) / totalSupply;
-        uint px0 = tokenization.getValueAsDebt(_lendingProtocol, uint256(uint160(token0)), 1e18);
-        uint px1 = tokenization.getValueAsDebt(_lendingProtocol, uint256(uint160(token1)), 1e18);
-        return sqrtK * 2 * (px0.sqrt()) / (2 ** 56) * (px1.sqrt()) / (2 ** 56) * amount;
+        return getValue(tokenId, amount);
     }
-
-
 
     function getNextTokenId(address, uint24) public pure override returns (uint) {
         revert('Not supported');
