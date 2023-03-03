@@ -26,8 +26,6 @@ import {
 } from "../typechain";
 
 async function main() {
-    const [owner] = await ethers.getSigners();
-
     // ----------------------file setting---------------------------------
     let readFileAddress = "../networks/" + hre.network.name + ".json";
     let writeFileAddress = "./networks/" + hre.network.name + ".json";
@@ -146,7 +144,7 @@ async function main() {
     await router.execute(MaxUint128, sushiConnector.address, sellCalldata);
 
     console.log("Deploy success ... 6/6 ");
-    config.ADMIN = owner.address;
+    config.ADMIN = deployer.address;
     config.ORACLE_ROUTER = oracleRouter.address;
     config.SIMPLE_PRICE_ORACLE = simplePriceOracle.address;
     config.UNI_V2_ORACLE = uniswapV2Oracle.address;

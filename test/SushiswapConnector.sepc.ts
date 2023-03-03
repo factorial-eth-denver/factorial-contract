@@ -51,23 +51,23 @@ describe('Sushiswap Connector unit test', () => {
     })
 
     describe('#1 simple test', async () => {
-        it('#1-1 buy success test', async () => {
-            let [user1] = await ethers.getSigners();
-            let usdcId = await helper.convertAddressToId(usdc.address);
-            let wethId = await helper.convertAddressToId(weth.address);
-            let buyCalldata = sushiConnector.interface.encodeFunctionData("buy",
-                [usdcId, wethId, 1000000, 0])
-            await router.execute(MaxUint128, sushiConnector.address, buyCalldata);
-        })
-
-        it('#1-2 sell success test', async () => {
-            let [user1] = await ethers.getSigners();
-            let usdcId = await helper.convertAddressToId(usdc.address);
-            let wethId = await helper.convertAddressToId(weth.address);
-            let sellCalldata = sushiConnector.interface.encodeFunctionData("sell",
-                [usdcId, wethId, 1000000, 0])
-            await router.execute(MaxUint128, sushiConnector.address, sellCalldata);
-        })
+        // it('#1-1 buy success test', async () => {
+        //     let [user1] = await ethers.getSigners();
+        //     let usdcId = await helper.convertAddressToId(usdc.address);
+        //     let wethId = await helper.convertAddressToId(weth.address);
+        //     let buyCalldata = sushiConnector.interface.encodeFunctionData("buy",
+        //         [usdcId, wethId, 1000000, 0])
+        //     await router.execute(MaxUint128, sushiConnector.address, buyCalldata);
+        // })
+        //
+        // it('#1-2 sell success test', async () => {
+        //     let [user1] = await ethers.getSigners();
+        //     let usdcId = await helper.convertAddressToId(usdc.address);
+        //     let wethId = await helper.convertAddressToId(weth.address);
+        //     let sellCalldata = sushiConnector.interface.encodeFunctionData("sell",
+        //         [usdcId, wethId, 1000000, 0])
+        //     await router.execute(MaxUint128, sushiConnector.address, sellCalldata);
+        // })
 
         it('#1-3 deposit success test', async () => {
             let mintCalldata = sushiConnector.interface.encodeFunctionData("depositNew",

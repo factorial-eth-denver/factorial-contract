@@ -134,27 +134,35 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
     }
 
     function mint(uint[] calldata _tokens, uint[] calldata _amounts) external override returns (uint) {
+        // 0. Validate params
         require(_tokens.length == 2 && _amounts.length == 2, 'Invalid params');
+
+        // 1. Before mint
         asset.safeBatchTransferFrom(msgSender(), address(this), _tokens, _amounts, '');
-        IERC20Upgradeable(_tokens[0].toAddress()).approve(address(miniChef), _amounts[0]);
-        IERC20Upgradeable(_tokens[1].toAddress()).approve(address(miniChef), _amounts[1]);
+        IERC20Upgradeable(_tokens[0].toAddress()).approve(address(sushiRouter), _amounts[0]);
+        IERC20Upgradeable(_tokens[1].toAddress()).approve(address(sushiRouter), _amounts[1]);
+
+        // 2. Do mint
         (uint amountA, uint amountB, uint liquidity) = sushiRouter.addLiquidity(
             _tokens[0].toAddress(), _tokens[1].toAddress(), _amounts[0], _amounts[1], 0, 0, address(this), block.timestamp
         );
+
+        // 3. After mint
         address lp = IUniswapV2Factory(sushiRouter.factory()).getPair(_tokens[0].toAddress(), _tokens[1].toAddress());
         asset.safeTransferFrom(address(this), msgSender(), lp, liquidity);
         if (amountA < _amounts[0]) asset.safeTransferFrom(address(this), msgSender(), _tokens[0], _amounts[0] - amountA, '');
         if (amountB < _amounts[1]) asset.safeTransferFrom(address(this), msgSender(), _tokens[1], _amounts[1] - amountB, '');
-        // for gas refund
-        IERC20Upgradeable(_tokens[0].toAddress()).approve(address(miniChef), 0);
-        IERC20Upgradeable(_tokens[1].toAddress()).approve(address(miniChef), 0);
+
+        // 4. Reset approval
+        IERC20Upgradeable(_tokens[0].toAddress()).approve(address(sushiRouter), 0);
+        IERC20Upgradeable(_tokens[1].toAddress()).approve(address(sushiRouter), 0);
         return liquidity;
     }
 
     function burn(uint[] calldata _tokens, uint _amount) external override returns (uint, uint) {
         require(_tokens.length == 2, 'Invalid params');
         address lp = IUniswapV2Factory(sushiRouter.factory()).getPair(_tokens[0].toAddress(), _tokens[1].toAddress());
-        IERC20Upgradeable(lp).approve(address(miniChef), _amount);
+        IERC20Upgradeable(lp).approve(address(sushiRouter), _amount);
         asset.safeTransferFrom(msgSender(), address(this), lp, _amount);
         (uint amountA, uint amountB) = sushiRouter.removeLiquidity(
             _tokens[0].toAddress(), _tokens[1].toAddress(), _amount, 0, 0, address(this), block.timestamp
