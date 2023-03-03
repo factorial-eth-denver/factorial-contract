@@ -12,13 +12,14 @@ import {
     SyntheticNFT,
     UniswapV2FT,
     TestHelper, FactorialRouter, FactorialAsset,
-    SimpleBorrower, Lending, Trigger, Liquidation, LiquidationBasic, LiquidationAuction, TriggerLogicStopLoss
+    MockTriggerHandler,
+    SimpleBorrower, Lending, Trigger, Liquidation, LiquidationBasic, LiquidationAuction, TriggerLogicStopLoss, TriggerLogicTakeProfit, TriggerLogicMaturity
 } from '../../typechain'
 import {
     DEBT_NFT_TOKEN_TYPE,
     SYNTHETIC_FT_TOKEN_TYPE,
     SYNTHETIC_NFT_TOKEN_TYPE
-} from "../constants";
+} from "../shared/constants";
 import {address} from "hardhat/internal/core/config/config-validation";
 
 const factorialFixture: Fixture<{
@@ -40,6 +41,9 @@ const factorialFixture: Fixture<{
     liquidationBasic: LiquidationBasic
     liquidationAuction: LiquidationAuction
     triggerLogicStopLoss: TriggerLogicStopLoss
+    triggerLogicTakeProfit: TriggerLogicTakeProfit
+    triggerLogicMaturity: TriggerLogicMaturity
+    mockTriggerHandler: MockTriggerHandler
 }> = async () => {
     const [deployer, user1] = await ethers.getSigners();
 
@@ -64,6 +68,9 @@ const factorialFixture: Fixture<{
     const liquidationBasicFactory = await ethers.getContractFactory('LiquidationBasic');
     const liquidationAuctionFactory = await ethers.getContractFactory('LiquidationAuction');
     const triggerLogicStopLossFactory = await ethers.getContractFactory('TriggerLogicStopLoss');
+    const triggerLogicTakeProfitFactory = await ethers.getContractFactory('TriggerLogicTakeProfit');
+    const triggerLogicMaturityFactory = await ethers.getContractFactory('TriggerLogicMaturity');
+    const mockTriggerHandlerFactory = await ethers.getContractFactory('MockTriggerHandler');
 
     const weth = await MockERC20Factory.deploy("mockWETH", "WETH", "18") as MockOldERC20;
     const usdc = await MockERC20Factory.deploy("mockUSDC", "USDC", "6") as MockOldERC20;
@@ -78,17 +85,17 @@ const factorialFixture: Fixture<{
     const syntheticNFT = await SyntheticNFTFactory.deploy() as SyntheticNFT;
     const helper = await testHelperFactory.deploy() as TestHelper;
 
-    const trigger = await triggerFactory.deploy(tokenization.address, asset.address) as Trigger;
-    const liquidation = await liquidationFactory.deploy(tokenization.address, debtNFT.address, trigger.address, asset.address) as Liquidation;
+    const trigger = await triggerFactory.deploy() as Trigger;
+    const liquidation = await liquidationFactory.deploy() as Liquidation;
     const liquidationBasic = await liquidationBasicFactory.deploy(liquidation.address, tokenization.address, debtNFT.address) as LiquidationBasic;
-    const liquidationAuction = await liquidationAuctionFactory.deploy(liquidation.address, tokenization.address, debtNFT.address, asset.address) as LiquidationAuction;
-    const triggerLogicStopLoss = await triggerLogicStopLossFactory.deploy() as TriggerLogicStopLoss;
-    // const lending = await lendingFactory.deploy(tokenization.address, debtNFT.address, trigger.address, asset.address, liquidation.address, liquidationBasic.address) as Lending;
+    const liquidationAuction = await liquidationAuctionFactory.deploy() as LiquidationAuction;
+    const triggerLogicStopLoss = await triggerLogicStopLossFactory.deploy(tokenization.address) as TriggerLogicStopLoss;
+    const triggerLogicTakeProfit = await triggerLogicTakeProfitFactory.deploy(tokenization.address) as TriggerLogicTakeProfit;
+    const triggerLogicMaturity = await triggerLogicMaturityFactory.deploy() as TriggerLogicMaturity;
     const lending = await lendingFactory.deploy() as Lending;
-    
-    // const simpleBorrower = await simpleBorrowerFactory.deploy(lending.address, debtNFT.address, debtNFT.address) as SimpleBorrower;
     const simpleBorrower = await simpleBorrowerFactory.deploy() as SimpleBorrower;
-    
+    const mockTriggerHandler = await mockTriggerHandlerFactory.deploy() as MockTriggerHandler;
+
     await router.initialize(asset.address);
     await asset.initialize(router.address, tokenization.address);
     await tokenization.initialize(asset.address);
@@ -99,14 +106,27 @@ const factorialFixture: Fixture<{
     await syntheticFT.initialize(tokenization.address, asset.address);
     await syntheticNFT.initialize(tokenization.address, asset.address);
     
-    await lending.initialize(tokenization.address, debtNFT.address, trigger.address, asset.address, liquidation.address, liquidationBasic.address);
-    
-    await simpleBorrower.initialize(asset.address, lending.address, debtNFT.address, debtNFT.address);
+    // await lending.initialize(tokenization.address, debtNFT.address, trigger.address, asset.address, liquidation.address, liquidationBasic.address);
+    await lending.initialize(tokenization.address, debtNFT.address, trigger.address, asset.address, liquidation.address, liquidationAuction.address);
+    await simpleBorrower.initialize(
+        tokenization.address,
+        asset.address,
+        lending.address,
+        syntheticNFT.address,
+        debtNFT.address
+    );
+    await trigger.initialize(asset.address, 20, 50);
+    await liquidation.initialize(tokenization.address, debtNFT.address, trigger.address, asset.address);
+    await liquidationAuction.initialize(liquidation.address, tokenization.address, debtNFT.address, asset.address);
 
     await lending.addBank(usdc.address);
     await lending.addBank(weth.address);
 
     await trigger.addTriggerLogic(triggerLogicStopLoss.address);
+    await trigger.addTriggerLogic(triggerLogicTakeProfit.address);
+    await trigger.addTriggerLogic(triggerLogicMaturity.address);
+
+    await liquidation.addModules([liquidationBasic.address, liquidationAuction.address]);
     
     await oracleRouter.setRoute(
         [usdc.address, weth.address],
@@ -122,8 +142,8 @@ const factorialFixture: Fixture<{
     await weth.approve(asset.address, "10000000000000000000000000");
     await usdc.approve(asset.address, "10000000000000000000000000");
 
-    await simplePriceOracle.setPrice(weth.address, '2000000000');
-    await simplePriceOracle.setPrice(usdc.address, '1000000');
+    await simplePriceOracle.setPrice(weth.address, '2000');
+    await simplePriceOracle.setPrice(usdc.address, '1000000000000');
 
     await tokenization.registerTokenType(0, erc20Asset.address);
     await tokenization.registerTokenType(DEBT_NFT_TOKEN_TYPE, debtNFT.address);
@@ -160,7 +180,10 @@ const factorialFixture: Fixture<{
         liquidation,
         liquidationBasic,
         liquidationAuction,
-        triggerLogicStopLoss
+        triggerLogicStopLoss,
+        triggerLogicTakeProfit,
+        triggerLogicMaturity,
+        mockTriggerHandler
     }
 }
 
