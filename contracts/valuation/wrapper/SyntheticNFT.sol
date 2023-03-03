@@ -12,7 +12,6 @@ import "../../connector/library/SafeCastUint256.sol";
 
 import "../../../interfaces/ITokenization.sol";
 import "../../../interfaces/IWrapper.sol";
-import "../../../interfaces/IMortgage.sol";
 import "../../../interfaces/ITrigger.sol";
 import "../../../interfaces/IAsset.sol";
 

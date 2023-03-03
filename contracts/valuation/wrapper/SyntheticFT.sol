@@ -10,7 +10,6 @@ import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
 import "../../../interfaces/ITokenization.sol";
 import "../../../interfaces/IWrapper.sol";
-import "../../../interfaces/IMortgage.sol";
 import "../../../interfaces/ITrigger.sol";
 import "../../../interfaces/IAsset.sol";
 import "../../connector/library/SafeCastUint256.sol";
