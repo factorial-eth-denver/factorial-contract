@@ -34,22 +34,16 @@ contract ConnectionPool is IConnectionPool, OwnableUpgradeable {
     function registerConnector(address _connector) external onlyOwner {
         lastConnectorId ++;
         connectors[_connector] = lastConnectorId;
+        connectionImpl = address(new Connection());
     }
 
     function increaseConnection(uint n) external {
         address[] memory param = new address[](n);
         require(n <= 20, 'Over gas limit');
         require(n >= 1, 'Under minimum');
-        if (nextConnectionId == 0) {
-            connectionImpl = address(new Connection());
-            connections[0] = connectionImpl;
-            param[n-1] = connectionImpl;
-            nextConnectionId ++;
-            n --;
-        }
         while (n > 0) {
             connections[nextConnectionId] = connectionImpl.clone();
-            param[n-1] = connectionImpl;
+            param[n-1] = connections[nextConnectionId];
             nextConnectionId ++;
             n --;
         }

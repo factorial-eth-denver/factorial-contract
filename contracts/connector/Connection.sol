@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+
 import "../../interfaces/IConnection.sol";
 import "../../interfaces/IConnectionPool.sol";
 
 import "hardhat/console.sol";
 contract Connection is IConnection{
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+
     IConnectionPool public connectionPool;
 
     constructor() {
@@ -34,5 +39,9 @@ contract Connection is IConnection{
             }
         }
         return returndata;
+    }
+
+    function doTransfer(address _token, address _to, uint _amount) external {
+        IERC20Upgradeable(_token).safeTransfer(_to, _amount);
     }
 }

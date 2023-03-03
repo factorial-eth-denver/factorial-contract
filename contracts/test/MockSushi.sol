@@ -25,6 +25,8 @@ contract MockSushi is IMasterChef {
     ) external returns (uint[] memory amounts){
         IERC20(_path[0]).transferFrom(msg.sender, address(this), _amountOut);
         IERC20(_path[1]).transfer(msg.sender, _amountOut);
+        amounts = new uint[](2);
+        amounts[1] = _amountOut;
     }
 
     function swapExactTokensForTokens(
@@ -36,10 +38,9 @@ contract MockSushi is IMasterChef {
     ) external returns (uint[] memory amounts){
         IERC20(_path[0]).transferFrom(msg.sender, address(this), _amountIn);
         IERC20(_path[1]).transfer(msg.sender, _amountIn);
+        amounts = new uint[](2);
+        amounts[1] = _amountIn;
     }
-
-    /// Mock Factory
-
 
     /// Mock Master Chef
     function poolInfo(uint pid) external view override returns (address, uint, uint, uint) {
