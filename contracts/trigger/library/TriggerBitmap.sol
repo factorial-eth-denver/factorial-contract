@@ -42,7 +42,7 @@ library TriggerBitmap {
         uint16 bitMapIdx = 0;
         uint curBitmap;
         while (true) {
-            curBitmap = self[bitMapIdx];
+            curBitmap = ~self[bitMapIdx];
             if (curBitmap == 0) {
                 require(bitMapIdx <= maxBitmapId, 'Not empty space');
                 bitMapIdx = bitMapIdx + 1;
