@@ -23,7 +23,7 @@ import {
     SyntheticNFT,
     TestHelper,
     Tokenization, UniswapV2Oracle, WrappedNativeToken__factory,
-    MockTriggerHandler, Margin, IUniswapV2Pair, IUniswapV2Router,
+    MockTriggerHandler, Margin, IUniswapV2Pair, IUniswapV2Router, LYF,
     SimpleBorrower, Lending, Trigger, Liquidation, LiquidationBasic, LiquidationAuction, TriggerLogicStopLoss, TriggerLogicTakeProfit, TriggerLogicMaturity, TriggerLogicLiquidate, WrappedNativeToken
 } from "../typechain";
 
@@ -53,6 +53,7 @@ async function main() {
     const triggerLogicLiquidateFactory = await ethers.getContractFactory('TriggerLogicLiquidate');
     const mockTriggerHandlerFactory = await ethers.getContractFactory('MockTriggerHandler');
     const marginFactory = await ethers.getContractFactory('Margin');
+    const lyfFactory = await ethers.getContractFactory('LYF');
 
 
     let wmatic = await WrappedNativeToken__factory.connect(config.WMATIC, deployer);
@@ -74,6 +75,7 @@ async function main() {
     const simpleBorrower = await simpleBorrowerFactory.deploy() as SimpleBorrower;
     const mockTriggerHandler = await mockTriggerHandlerFactory.deploy() as MockTriggerHandler;
     const margin = await marginFactory.deploy() as Margin;
+    const lyf = await lyfFactory.deploy() as LYF;
 
     console.log("Deploy success ... 2/6 ");
 
@@ -89,7 +91,8 @@ async function main() {
     await liquidation.initialize(config.TOKENIZATION, config.DEBT_NFT, trigger.address, config.ASSET_MANAGEMENT);
     await liquidationAuction.initialize(liquidation.address, config.TOKENIZATION, config.DEBT_NFT, config.ASSET_MANAGEMENT);
     await margin.initialize(config.ASSET_MANAGEMENT, lending.address, config.DEBT_NFT, config.SUSHI_CONNECTOR);
-
+    await lyf.initialize(config.ASSET_MANAGEMENT, config.LENDING, config.DEBT_NFT, config.SUSHI_CONNECTOR);
+    
     await lending.addBank(usdc.address);
     await lending.addBank(wmatic.address);
 
