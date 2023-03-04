@@ -9,7 +9,8 @@ const fs = require('fs');
 import {ethers} from "hardhat";
 import hre from 'hardhat'
 import {
-    AssetManagement, ChainlinkOracle,
+    AssetManagement,
+    ChainlinkOracle,
     ConnectionPool,
     DebtNFT,
     ERC20Asset,
@@ -22,9 +23,26 @@ import {
     SyntheticFT,
     SyntheticNFT,
     TestHelper,
-    Tokenization, UniswapV2Oracle, WrappedNativeToken__factory,
-    MockTriggerHandler, Margin, IUniswapV2Pair, IUniswapV2Router, LYF,
-    SimpleBorrower, Lending, Trigger, Liquidation, LiquidationBasic, LiquidationAuction, TriggerLogicStopLoss, TriggerLogicTakeProfit, TriggerLogicMaturity, TriggerLogicLiquidate, WrappedNativeToken
+    Tokenization,
+    UniswapV2Oracle,
+    WrappedNativeToken__factory,
+    MockTriggerHandler,
+    Margin,
+    IUniswapV2Pair,
+    IUniswapV2Router,
+    LYF,
+    SimpleBorrower,
+    Lending,
+    Trigger,
+    Liquidation,
+    LiquidationBasic,
+    LiquidationAuction,
+    TriggerLogicStopLoss,
+    TriggerLogicTakeProfit,
+    TriggerLogicMaturity,
+    TriggerLogicLiquidate,
+    WrappedNativeToken,
+    Logging
 } from "../typechain";
 
 async function main() {
@@ -54,6 +72,7 @@ async function main() {
     const mockTriggerHandlerFactory = await ethers.getContractFactory('MockTriggerHandler');
     const marginFactory = await ethers.getContractFactory('Margin');
     const lyfFactory = await ethers.getContractFactory('LYF');
+    const loggingFactory = await ethers.getContractFactory('Logging');
 
     let wmatic = await WrappedNativeToken__factory.connect(config.WMATIC, deployer);
     let sushi = await MockERC20__factory.connect(config.SUSHI, deployer);
@@ -75,6 +94,7 @@ async function main() {
     const mockTriggerHandler = await mockTriggerHandlerFactory.deploy() as MockTriggerHandler;
     const margin = await marginFactory.deploy() as Margin;
     const lyf = await lyfFactory.deploy() as LYF;
+    const logging =  await loggingFactory.deploy() as Logging;
 
     console.log("Deploy success ... 2/3 ");
 
@@ -89,8 +109,8 @@ async function main() {
     await trigger.initialize(config.ASSET_MANAGEMENT, 20, 50);
     await liquidation.initialize(config.TOKENIZATION, config.DEBT_NFT, trigger.address, config.ASSET_MANAGEMENT);
     await liquidationAuction.initialize(liquidation.address, config.TOKENIZATION, config.DEBT_NFT, config.ASSET_MANAGEMENT);
-    await margin.initialize(config.ASSET_MANAGEMENT, lending.address, config.DEBT_NFT, config.SUSHI_CONNECTOR);
-    await lyf.initialize(config.ASSET_MANAGEMENT, config.LENDING, config.DEBT_NFT, config.SUSHI_CONNECTOR);
+    await margin.initialize(config.ASSET_MANAGEMENT, lending.address, config.DEBT_NFT, config.SUSHI_CONNECTOR, logging.address);
+    await lyf.initialize(config.ASSET_MANAGEMENT, config.LENDING, config.DEBT_NFT, config.SUSHI_CONNECTOR, logging.address);
     
     await lending.addBank(usdc.address);
     await lending.addBank(wmatic.address);
