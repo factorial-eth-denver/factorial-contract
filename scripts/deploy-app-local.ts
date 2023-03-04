@@ -55,7 +55,6 @@ async function main() {
     const marginFactory = await ethers.getContractFactory('Margin');
     const lyfFactory = await ethers.getContractFactory('LYF');
 
-
     let wmatic = await WrappedNativeToken__factory.connect(config.WMATIC, deployer);
     let sushi = await MockERC20__factory.connect(config.SUSHI, deployer);
     let usdc = await MockERC20__factory.connect(config.USDC, deployer);
@@ -105,16 +104,17 @@ async function main() {
     await liquidation.addModules([liquidationBasic.address, liquidationAuction.address]);
 
     const [signer] = await ethers.getSigners();
-    const usdcAmount = ethers.BigNumber.from(10).pow(6).mul(20);
-    const wmaticAmount = ethers.BigNumber.from(10).pow(16).mul(2);
-    let depositCallData1 = lending.interface.encodeFunctionData("deposit",
-        [usdc.address, usdcAmount]);
+    const usdcAmount = ethers.BigNumber.from(10).pow(6).mul(2000);
+    const wethAmount = ethers.BigNumber.from(10).pow(18).mul(2);
 
     const MAX = ethers.constants.MaxUint256;
     const router = await ethers.getContractAt("FactorialRouter", config.FACTORIAL_ROUTER, signer) as FactorialRouter;
+    
+    let depositCallData1 = lending.interface.encodeFunctionData("deposit",
+        [usdc.address, usdcAmount]);
     await router.execute(MAX, lending.address, depositCallData1);
     let depositCallData2 = lending.interface.encodeFunctionData("deposit",
-        [wmatic.address, wmaticAmount]);
+        [config.WETH, wethAmount]);
     await router.execute(MAX, lending.address, depositCallData2);
 
     console.log("Deploy success ... 3/3 ");
