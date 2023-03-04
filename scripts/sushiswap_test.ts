@@ -1,9 +1,6 @@
 import {
-    DEBT_NFT_TOKEN_TYPE, MaxUint128,
-    SUSHI_NFT_TOKEN_TYPE,
-    SYNTHETIC_FT_TOKEN_TYPE,
-    SYNTHETIC_NFT_TOKEN_TYPE
-} from "../test/shared/constants";
+    MaxUint128,
+} from "./constants";
 
 const fs = require('fs');
 import {ethers} from "hardhat";
@@ -29,12 +26,28 @@ async function main() {
     let helper = await TestHelper__factory.connect(config.HELPER, deployer);
     let sushiConnector = await SushiswapConnector__factory.connect(config.SUSHI_CONNECTOR, deployer);
     let router = await FactorialRouter__factory.connect(config.FACTORIAL_ROUTER, deployer);
+    let lp = await MockERC20__factory.connect(config.SUSHI_WMATIC_USDC_LP, deployer);
 
+
+    console.log("lp balance" + await lp.balanceOf(deployer.address));
+    console.log("usdc balance :" + await usdc.balanceOf(deployer.address));
+    console.log("wmatic balance :" + await wmatic.balanceOf(deployer.address));
     let usdcId = await helper.convertAddressToId(usdc.address);
     let wmaticId = await helper.convertAddressToId(wmatic.address);
-    let sellCalldata = sushiConnector.interface.encodeFunctionData("mint",
+    let mintCalldata = sushiConnector.interface.encodeFunctionData("mint",
         [[wmaticId, usdcId], ["100000000000000000", "100000"]])
-    await router.execute(MaxUint128, sushiConnector.address, sellCalldata);
+    await router.execute(MaxUint128, sushiConnector.address, mintCalldata);
+    let bal = await lp.balanceOf(deployer.address);
+    console.log("lp balance" + bal);
+    console.log("usdc balance :" + await usdc.balanceOf(deployer.address));
+    console.log("wmatic balance :" + await wmatic.balanceOf(deployer.address));
+    let burnCalldata = sushiConnector.interface.encodeFunctionData("burn",
+        [[wmaticId, usdcId], bal])
+    await router.execute(MaxUint128, sushiConnector.address, burnCalldata);
+
+    console.log("lp balance" + await lp.balanceOf(deployer.address));
+    console.log("usdc balance :" + await usdc.balanceOf(deployer.address));
+    console.log("wmatic balance :" + await wmatic.balanceOf(deployer.address));
 
     // ---------------------------write file-------------------------------
     fs.writeFileSync(writeFileAddress, JSON.stringify(config, null, 1));

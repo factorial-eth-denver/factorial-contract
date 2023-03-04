@@ -3,7 +3,7 @@ import {
     SUSHI_NFT_TOKEN_TYPE,
     SYNTHETIC_FT_TOKEN_TYPE,
     SYNTHETIC_NFT_TOKEN_TYPE
-} from "../test/shared/constants";
+} from "./constants";
 
 const fs = require('fs');
 import {ethers} from "hardhat";
