@@ -133,7 +133,7 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         asset.safeTransferFrom(address(this), msgSender(), _wantToken, amountOut, '');
     }
 
-    function mint(uint256[] calldata _tokens, uint256[] calldata _amounts) external override returns (uint) {
+    function mint(uint256[] calldata _tokens, uint256[] calldata _amounts) external override returns (uint256) {
         // 0. Validate params
         require(_tokens.length == 2 && _amounts.length == 2, 'Invalid params');
 
@@ -204,11 +204,11 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         IConnection(connection).execute(address(this), callData);
     }
 
-    function deposit(uint256 _pid, uint256 _amount, address _asset, address _masterChef, address _sushi, address _caller) external {
-        address lp = IMiniChef(_masterChef).lpToken(_pid);
+    function deposit(uint256 _pid, uint256 _amount, address _asset, address _miniChef, address _sushi, address _caller) external {
+        address lp = IMiniChef(_miniChef).lpToken(_pid);
         IAsset(_asset).safeTransferFrom(_caller, address(this), lp, _amount);
-        IERC20Upgradeable(lp).approve(_masterChef, _amount);
-        IMiniChef(_masterChef).deposit(_pid, _amount, address(this));
+        IERC20Upgradeable(lp).approve(_miniChef, _amount);
+        IMiniChef(_miniChef).deposit(_pid, _amount, address(this));
         IAsset(_asset).safeTransferFrom(
             address(this), _caller, _sushi, IERC20Upgradeable(_sushi).balanceOf(address(this))
         );
@@ -241,8 +241,8 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         IAsset(_asset).safeTransferFrom(address(this), _caller, lp, _amount);
     }
 
-    function setPools(uint256 lp, uint256 pool) external onlyOwner {
-        lpToPoolId[lp] = pool;
+    function setPools(uint256 lp, uint256 poolId) external onlyOwner {
+        lpToPoolId[lp] = poolId;
     }
 
     function getPoolId(uint256 _tokenA, uint256 _tokenB) external view override returns (uint256) {
@@ -284,7 +284,7 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         uint256 tokenB,
         uint256 amountA,
         uint256 amountB
-    ) external override returns (uint256 swapAmt, bool isReversed) {
+    ) external view override returns (uint256 swapAmt, bool isReversed) {
         (uint256 reserveA, uint256 reserveB) = getReserves(tokenA, tokenB);
         return optimalDeposit(amountA, amountB, reserveA, reserveB);
     }

@@ -32,6 +32,8 @@ contract UniswapV2Oracle is OwnableUpgradeable, IPriceOracle {
         }
         address token0 = IUniswapV2Pair(_token).token0();
         address token1 = IUniswapV2Pair(_token).token1();
+        uint256 decimal0 = IERC20Ex(token0).decimals();
+        uint256 decimal1 = IERC20Ex(token1).decimals();
         uint256 totalSupply = IUniswapV2Pair(_token).totalSupply();
         (uint256 r0, uint256 r1,) = IUniswapV2Pair(_token).getReserves();
         uint256 sqrtK = r0 * (r1.sqrt()) * (2 ** 112) / totalSupply;

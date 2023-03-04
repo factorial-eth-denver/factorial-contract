@@ -61,7 +61,7 @@ async function main() {
     let usdc = await MockERC20__factory.connect(config.USDC, deployer);
     let wmatic_usdc_lp = await MockERC20__factory.connect(config.SUSHI_WMATIC_USDC_LP, deployer);
 
-    console.log("Deploy success ... 1/6 ");
+    console.log("Deploy success ... 1/3 ");
 
     const trigger = await triggerFactory.deploy() as Trigger;
     const liquidation = await liquidationFactory.deploy() as Liquidation;
@@ -77,7 +77,7 @@ async function main() {
     const margin = await marginFactory.deploy() as Margin;
     const lyf = await lyfFactory.deploy() as LYF;
 
-    console.log("Deploy success ... 2/6 ");
+    console.log("Deploy success ... 2/3 ");
 
     await lending.initialize(config.TOKENIZATION, config.DEBT_NFT, trigger.address, config.ASSET_MANAGEMENT, liquidation.address, liquidationAuction.address);
     await simpleBorrower.initialize(
@@ -95,6 +95,7 @@ async function main() {
     
     await lending.addBank(usdc.address);
     await lending.addBank(wmatic.address);
+    await lending.addBank(config.WETH);
 
     await trigger.addTriggerLogic(triggerLogicStopLoss.address);
     await trigger.addTriggerLogic(triggerLogicTakeProfit.address);
@@ -103,13 +104,14 @@ async function main() {
 
     await liquidation.addModules([liquidationBasic.address, liquidationAuction.address]);
 
-    console.log("Deploy success ... 6/6 ");
+    console.log("Deploy success ... 3/3 ");
 
     config.TRIGGER = trigger.address;
     config.LIQUIDATION = liquidation.address;
     config.LIQUIDATION_AUCTION = liquidationAuction.address;
     config.LENDING = lending.address;
     config.MARGIN = margin.address;
+    config.LEVERAGE_YIELD_FARMING = lyf.address;
     // ---------------------------write file-------------------------------
     fs.writeFileSync(writeFileAddress, JSON.stringify(config, null, 1));
 }
