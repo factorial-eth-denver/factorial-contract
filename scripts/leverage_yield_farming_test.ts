@@ -6,9 +6,9 @@ const fs = require('fs');
 import {ethers} from "hardhat";
 import hre from 'hardhat'
 import {
-    AssetManagement__factory, Connection__factory, ConnectionPool__factory,
+    AssetManagement__factory, Connection__factory, ConnectionPool__factory, DebtNFT, DebtNFT__factory,
     FactorialRouter__factory,
-    Lending__factory,
+    Lending__factory, Logging, Logging__factory,
     LYF,
     LYF__factory,
     MockERC20__factory,
@@ -38,43 +38,37 @@ async function main() {
     let asset = await AssetManagement__factory.connect(config.ASSET_MANAGEMENT, deployer);
     let router = await FactorialRouter__factory.connect(config.FACTORIAL_ROUTER, deployer);
     let oracle = await OracleRouter__factory.connect(config.ORACLE_ROUTER, deployer);
-
-    const lyfFactory = await ethers.getContractFactory('LYF');
+    let lyf = await LYF__factory.connect(config.LEVERAGE_YIELD_FARMING, deployer);
+    let debtNft = await DebtNFT__factory.connect(config.DEBT_NFT, deployer);
 
     let helper = await TestHelper__factory.connect(config.HELPER, deployer);
 
     let usdcId = await helper.convertAddressToId(usdc.address);
     let wethId = await helper.convertAddressToId(weth.address);
+    //
+    // const usdcAmount = BigNumber.from(10).pow(7).mul(2);
+    // const wethAmount = BigNumber.from(10).pow(16).mul(1);
+    // let depositCallData1 = lending.interface.encodeFunctionData("deposit",
+    //     [usdc.address, usdcAmount]);
+    // await router.execute(MaxUint128, lending.address, depositCallData1);
+    // let depositCallData2 = lending.interface.encodeFunctionData("deposit",
+    //     [weth.address, wethAmount]);
+    // await router.execute(MaxUint128, lending.address, depositCallData2);
+    //
+    // let openCalldata = lyf.interface.encodeFunctionData("open",
+    //     [[usdcId, wethId], [usdcAmount, wethAmount], usdcId, usdcAmount.div(2)]);
+    // await router.execute(MaxUint128, lyf.address, openCalldata);
 
-    const SushiConnectorFactory = await ethers.getContractFactory('SushiswapConnector');
-    const sushiConnector = await SushiConnectorFactory.deploy() as SushiswapConnector;
-    await asset.registerFactorialModules([sushiConnector.address]);
-    await sushiConnector.initialize(tokenization.address, asset.address, connectionPool.address, config.SUSHI_MINICHEF, config.SUSHI_ROUTER, SUSHI_NFT_TOKEN_TYPE);
-    await connectionPool.registerConnector(sushiConnector.address);
+    let loggingAddress = await lyf.logging();
+    let logging = await Logging__factory.connect(loggingAddress, deployer);
 
-    const usdcAmount = BigNumber.from(10).pow(7).mul(2);
-    const wethAmount = BigNumber.from(10).pow(16).mul(1);
-    let depositCallData1 = lending.interface.encodeFunctionData("deposit",
-        [usdc.address, usdcAmount]);
-    await router.execute(MaxUint128, lending.address, depositCallData1);
-    let depositCallData2 = lending.interface.encodeFunctionData("deposit",
-        [weth.address, wethAmount]);
-    await router.execute(MaxUint128, lending.address, depositCallData2);
-
-
-    await sushiConnector.setPools(await helper.convertAddressToId(config.SUSHI_WETH_USDC_LP), 1);
-    console.log("####"+await oracle.getPrice(config.USDC));
-    console.log("####"+await oracle.getPrice(config.WETH));
-    console.log("####"+await oracle.getPrice(config.SUSHI_WETH_USDC_LP));
-
-    console.log("@@@@"+await tokenization.getValueAsDebt(deployer.address, config.USDC, usdcAmount));
-    console.log("@@@@"+await tokenization.getValueAsDebt(deployer.address, config.WETH, wethAmount));
-    console.log("@@@@"+await tokenization.getValueAsCollateral(deployer.address, config.SUSHI_WETH_USDC_LP, wethAmount));
-    const lyf = await lyfFactory.deploy() as LYF;
-    await lyf.initialize(config.ASSET_MANAGEMENT, config.LENDING, config.DEBT_NFT, sushiConnector.address);
-    let openCalldata = lyf.interface.encodeFunctionData("open",
-        [[usdcId, wethId], [usdcAmount, wethAmount], usdcId, usdcAmount.div(2)]);
-    await router.execute(MaxUint128, lyf.address, openCalldata);
+    const loggingFactory = await ethers.getContractFactory('Logging');
+    let logging2 = await loggingFactory.deploy() as Logging;
+    await logging2.initialize(config.DEBT_NFT,config.LENDING);
+    let test = await logging.tokens(deployer.address, 0)
+    await logging2.add(deployer.address, test, false);
+    console.log(await debtNft.tokenInfos(test));
+    console.log(await logging2.getStatus(deployer.address));
 
     // ---------------------------write file-------------------------------
     fs.writeFileSync(writeFileAddress, JSON.stringify(config, null, 1));

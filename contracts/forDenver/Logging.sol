@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
+pragma abicoder v2;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
@@ -59,7 +60,7 @@ contract Logging {
         for (uint256 i = 0; i < length; i++) {
             uint tokenId = tokens[_user][i];
             (uint collateralToken, uint collateralAmount, ) = debtNFT.tokenInfos(tokenId);
-            if(collateralAmount == 0) {
+            if (collateralAmount == 0) {
                 continue;
             }
             (uint256 debtTokenId, uint256 debtAmount) = lending.getDebt(tokenId);
@@ -68,6 +69,7 @@ contract Logging {
             positions[writeId].debtToken = debtTokenId;
             positions[writeId].debtAmount = debtAmount;
             positions[writeId].isMargin = isMarginToken[_user][i];
+            writeId ++;
         }
     }
 }
