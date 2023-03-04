@@ -51,9 +51,11 @@ async function main() {
     const ChainlinkOracleFactory = await ethers.getContractFactory('ChainlinkOracle');
 
     let wmatic = await WrappedNativeToken__factory.connect(config.WMATIC, deployer);
+    let weth = await MockERC20__factory.connect(config.WETH, deployer);
     let sushi = await MockERC20__factory.connect(config.SUSHI, deployer);
     let usdc = await MockERC20__factory.connect(config.USDC, deployer);
     let wmatic_usdc_lp = await MockERC20__factory.connect(config.SUSHI_WMATIC_USDC_LP, deployer);
+    let weth_usdc_lp = await MockERC20__factory.connect(config.SUSHI_WETH_USDC_LP, deployer);
 
     console.log("Deploy success ... 1/6 ");
     const oracleRouter = await OracleRouterFactory.deploy() as OracleRouter;
@@ -84,7 +86,7 @@ async function main() {
     await syntheticFT.initialize(tokenization.address, asset.address);
     await syntheticNFT.initialize(tokenization.address, asset.address);
     await connectionPool.initialize(asset.address);
-    await sushiNFT.initialize(tokenization.address, config.SUSHI_MINICHEF);
+    await sushiNFT.initialize(tokenization.address, config.SUSHI_MINICHEF, connectionPool.address);
     await chainlinkOracle.initialize();
 
     console.log("Deploy success ... 3/6 ");
@@ -92,27 +94,32 @@ async function main() {
     await usdc.approve(asset.address, MaxUint128);
     await wmatic.approve(asset.address, MaxUint128);
     await wmatic_usdc_lp.approve(asset.address, MaxUint128);
+    await weth.approve(asset.address, MaxUint128);
+    await weth_usdc_lp.approve(asset.address, MaxUint128);
 
     await oracleRouter.setRoute(
-        [usdc.address, wmatic.address, sushi.address, wmatic_usdc_lp.address],
-        [chainlinkOracle.address, chainlinkOracle.address, simplePriceOracle.address, uniswapV2Oracle.address]
+        [usdc.address, wmatic.address, weth.address, sushi.address, wmatic_usdc_lp.address, weth_usdc_lp.address],
+        [chainlinkOracle.address, chainlinkOracle.address, chainlinkOracle.address, simplePriceOracle.address, uniswapV2Oracle.address, uniswapV2Oracle.address]
     );
 
-    await chainlinkOracle.setPriceFeed([wmatic.address, usdc.address], [config.CHAINLINK_MATIC_USD, config.CHAINLINK_USDC_USD]);
+    await chainlinkOracle.setPriceFeed([wmatic.address, usdc.address, weth.address],
+        [config.CHAINLINK_MATIC_USD, config.CHAINLINK_USDC_USD, config.CHAINLINK_WETH_USD]);
     await simplePriceOracle.setPrice(sushi.address, '1000000000');
     await simplePriceOracle.setPrice(wmatic_usdc_lp.address, uniswapV2Oracle.address);
 
     console.log("Deploy success ... 4/6 ");
     await tokenization.registerTokenType(0, erc20Asset.address);
+    await tokenization.setGuideTokenFactor(weth.address, 9000, 11000);
     await tokenization.setGuideTokenFactor(wmatic.address, 9000, 11000);
     await tokenization.setGuideTokenFactor(usdc.address, 9000, 11000);
+    await tokenization.setGuideTokenFactor(weth_usdc_lp.address, 9000, 11000);
     await tokenization.registerTokenType(DEBT_NFT_TOKEN_TYPE, debtNFT.address);
     await tokenization.setGuideTokenFactor(DEBT_NFT_TOKEN_TYPE, 9000, 11000);
     await tokenization.registerTokenType(SYNTHETIC_FT_TOKEN_TYPE, syntheticFT.address);
     await tokenization.setGuideTokenFactor(SYNTHETIC_FT_TOKEN_TYPE, 9000, 11000);
     await tokenization.registerTokenType(SYNTHETIC_NFT_TOKEN_TYPE, syntheticNFT.address);
     await tokenization.setGuideTokenFactor(SYNTHETIC_NFT_TOKEN_TYPE, 9000, 11000);
-    await tokenization.registerTokenType(SUSHI_NFT_TOKEN_TYPE, syntheticNFT.address);
+    await tokenization.registerTokenType(SUSHI_NFT_TOKEN_TYPE, sushiNFT.address);
     await tokenization.setGuideTokenFactor(SUSHI_NFT_TOKEN_TYPE, 9000, 11000);
 
     await asset.registerFactorialModules([
@@ -128,21 +135,24 @@ async function main() {
 
     console.log("Deploy success ... 5/6 ");
     await connectionPool.increaseConnection(10);
-    await connectionPool.increaseConnection(10);
-    await connectionPool.increaseConnection(10);
 
     await asset.registerFactorialModules([sushiConnector.address]);
     await sushiConnector.initialize(tokenization.address, asset.address, connectionPool.address, config.SUSHI_MINICHEF, config.SUSHI_ROUTER, SUSHI_NFT_TOKEN_TYPE);
     await connectionPool.registerConnector(sushiConnector.address);
+    await sushiConnector.setPools(await helper.convertAddressToId(config.SUSHI_WETH_USDC_LP), 1);
 
 
     /// Optional
-    await wmatic.deposit({value: "100000000000000000000"});
+    await wmatic.deposit({value: "9000000000000000000000"});
 
+    let wethId = await helper.convertAddressToId(weth.address);
     let usdcId = await helper.convertAddressToId(usdc.address);
     let wmaticId = await helper.convertAddressToId(wmatic.address);
     let sellCalldata = sushiConnector.interface.encodeFunctionData("sell",
-        [wmaticId, usdcId, "5000000000000000000", 0])
+        [wmaticId, usdcId, "4500000000000000000000", 0])
+    await router.execute(MaxUint128, sushiConnector.address, sellCalldata);
+    sellCalldata = sushiConnector.interface.encodeFunctionData("sell",
+        [wmaticId, wethId, "4500000000000000000000", 0])
     await router.execute(MaxUint128, sushiConnector.address, sellCalldata);
 
     console.log("Deploy success ... 6/6 ");

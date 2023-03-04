@@ -69,7 +69,7 @@ contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
     ) public {
         // 0. Validate states
         require(borrowCache.caller == address(0), "Already locked");
-        require(amounts[0] == debtAsset || amounts[1] == debtAsset, "Borrow token only for LP");
+        require(assets[0] == debtAsset || assets[1] == debtAsset, "Borrow token only for LP");
 
         // 1. Caching params
         borrowCache = BorrowCache(msgSender(), assets, amounts, debtAsset, debtAmount);
@@ -89,33 +89,35 @@ contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
 
     function borrowCallback() public override {
         /// 0. Declare local variable.
-        uint256 collateralA = borrowCache.inputAssets[0];
-        uint256 collateralB = borrowCache.inputAssets[1];
+        uint256 assetA = borrowCache.inputAssets[0];
+        uint256 assetB = borrowCache.inputAssets[1];
         uint256 debtToken = borrowCache.debtAsset;
         uint256 amtA = borrowCache.inputAmounts[0];
         uint256 amtB = borrowCache.inputAmounts[1];
 
         /// 1. Validate states
         require(borrowCache.caller != address(0), "Unlocked");
-        require(collateralA == debtToken || collateralB == debtToken, "Borrow token only for LP");
+        require(assetA == debtToken || assetB == debtToken, "Borrow token only for LP");
 
         /// 2. Optimal swap before deposit
         {
-            if (collateralA == debtToken) {
+            if (assetA == debtToken) {
                 amtA += borrowCache.debtAmount;
             } else {
                 amtB += borrowCache.debtAmount;
             }
 
-            (uint256 swapAmt, bool isReversed) = ISwapConnector(sushiConnector).optimalSwapAmount(collateralA, collateralB, amtA, amtB);
-            if (isReversed) {
-                int[] memory swapOutput = IDexConnector(sushiConnector).sell(collateralA, collateralB, swapAmt, 0);
-                amtA -= swapAmt;
-                amtB += uint256(swapOutput[1]);
-            } else {
-                int[] memory swapOutput = IDexConnector(sushiConnector).sell(collateralB, collateralA, swapAmt, 0);
-                amtA += uint256(swapOutput[1]);
-                amtB -= swapAmt;
+            (uint256 swapAmt, bool isReversed) = ISwapConnector(sushiConnector).optimalSwapAmount(assetA, assetB, amtA, amtB);
+            if (swapAmt != 0) {
+                if (!isReversed) {
+                    int[] memory swapOutput = IDexConnector(sushiConnector).sell(assetA, assetB, swapAmt, 0);
+                    amtA -= swapAmt;
+                    amtB += uint256(swapOutput[1]);
+                } else {
+                    int[] memory swapOutput = IDexConnector(sushiConnector).sell(assetB, assetA, swapAmt, 0);
+                    amtA += uint256(swapOutput[1]);
+                    amtB -= swapAmt;
+                }
             }
         }
 
@@ -123,8 +125,8 @@ contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         uint256 lpAmount;
         {
             uint256[] memory mintTokens = new uint256[](2);
-            mintTokens[0] = collateralA;
-            mintTokens[1] = collateralB;
+            mintTokens[0] = assetA;
+            mintTokens[1] = assetB;
             uint256[] memory mintAmounts = new uint256[](2);
             mintAmounts[0] = amtA;
             mintAmounts[1] = amtB;
@@ -133,7 +135,7 @@ contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
 
         /// 4. Deposit & Transfer NFT to user.
         {
-            uint256 poolId = ISwapConnector(sushiConnector).getPoolId(collateralA, collateralB);
+            uint256 poolId = ISwapConnector(sushiConnector).getPoolId(assetA, assetB);
             uint256 tokenId = ISwapConnector(sushiConnector).depositNew(poolId, lpAmount);
             asset.safeTransferFrom(address(this), msg.sender, tokenId, 1, "");
         }
