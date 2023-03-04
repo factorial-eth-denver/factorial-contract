@@ -6,16 +6,17 @@ import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "./Lending.sol";
 import "../connector/sushi/SushiswapConnector.sol";
 import "../valuation/Tokenization.sol";
 import "../../interfaces/IBorrowable.sol";
 import "../../contracts/valuation/wrapper/SyntheticNFT.sol";
 import "../../contracts/valuation/wrapper/DebtNFT.sol";
+import "../../interfaces/ILending.sol";
+import "../test/WETH.sol";
 
-contract Margin is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
+contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
     DebtNFT public debtNFT;
-    Lending public lending;
+    ILending public lending;
     SushiswapConnector public sushi;
 
     BorrowCache public borrowCache;
@@ -47,7 +48,7 @@ contract Margin is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         address _deptNFT,
         address _sushi
     ) public initContext(_asset) {
-        lending = Lending(_lending);
+        lending = ILending(_lending);
         debtNFT = DebtNFT(_deptNFT);
         sushi = SushiswapConnector(_sushi);
     }
@@ -78,14 +79,32 @@ contract Margin is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         require(borrowCache.init == true, "not borrowed");
         
         // Optimal Swap!!
-        // int256[] memory amounts = sushi.sell(borrowCache.debtAsset, borrowCache.collateralAssets[0], borrowCache.debtAmounts[0], 0);
+        int256[] memory amounts = sushi.sell(borrowCache.debtAsset, borrowCache.collateralAssets[0], borrowCache.debtAmounts[0], 0);
+        uint256 lp = sushi.getLP(borrowCache.collateralAssets[0], borrowCache.collateralAssets[1]);
+        uint256 resA;
+        uint256 resB;
+        if (sushi.getToken0(lp) == borrowCache.collateralAssets[0]) {
+            (resA, resB) = sushi.getReserves(borrowCache.collateralAssets[0], borrowCache.collateralAssets[1]);
+        } else {
+            (resB, resA) = sushi.getReserves(borrowCache.collateralAssets[0], borrowCache.collateralAssets[1]);
+        }
 
-
-        
+        uint256 amtA = borrowCache.collateralAmounts[0];
+        uint256 amtB = borrowCache.collateralAmounts[1];
+        if (borrowCache.collateralAssets[0] == borrowCache.debtAsset) {
+            amtA += borrowCache.debtAmount;
+        } else {
+            amtB += borrowCache.debtAmount;
+        }
+        int256[] memory amounts;
+        (uint256 swapAmt, bool isReversed) = sushi.optimalDeposit(amtA, amtB, resA, resB);
+        if (isReversed) {
+            amounts = sushi.sell(borrowCache.collateralAmounts[1], borrowCache.collateralAmounts[0], swapAmt, 0);
+        } else{
+            amounts = sushi.sell(borrowCache.collateralAmounts[0], borrowCache.collateralAmounts[1], swapAmt, 0);
+        }
         uint256[] memory mintTokens = new uint256[](2);
         uint256[] memory mintAmounts = new uint256[](2);
-
-        uint256 lp = sushi.getLP(mintTokens[0], mintTokens[1]);
         uint256 poolId = sushi.getPoolId(mintTokens[0], mintTokens[1]);
 
         uint256 lpBalance = asset.balanceOf(address(this), lp);
