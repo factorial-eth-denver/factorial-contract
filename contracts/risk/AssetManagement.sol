@@ -48,7 +48,7 @@ contract AssetManagement is FactorialAsset, OwnableUpgradeable, UUPSUpgradeable 
     /// @dev Caching states for financial soundness.
     /// @param _maximumLoss The maximum loss of this tx.
     /// @param _caller The external caller of factorial tx.
-    function beforeExecute(uint _maximumLoss, address _caller) external onlyRouter {
+    function beforeExecute(uint256 _maximumLoss, address _caller) external onlyRouter {
         require(caller == address(0), 'Locked');
         caller = _caller;
         cache.maximumLoss = _maximumLoss;
@@ -128,7 +128,7 @@ contract AssetManagement is FactorialAsset, OwnableUpgradeable, UUPSUpgradeable 
     /// @param _to The receiver address.
     /// @param _tokenId The token id to mint.
     /// @param _amount The amount of minting.
-    function mint(address _to, uint _tokenId, uint _amount) public onlyFactorialModule {
+    function mint(address _to, uint256 _tokenId, uint256 _amount) public onlyFactorialModule {
         if (_to == caller) {
             cache.outputValue += tokenization.getValue(_tokenId, _amount);
         }
@@ -139,7 +139,7 @@ contract AssetManagement is FactorialAsset, OwnableUpgradeable, UUPSUpgradeable 
     /// @param _from The payer address.
     /// @param _tokenId The token id to burn.
     /// @param _amount The amount of burn.
-    function burn(address _from, uint _tokenId, uint _amount) public onlyFactorialModule {
+    function burn(address _from, uint256 _tokenId, uint256 _amount) public onlyFactorialModule {
         if (_from == caller) {
             cache.inputValue += tokenization.getValue(_tokenId, _amount);
         }

@@ -53,7 +53,7 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
         address _caller,
         uint24 _tokenType,
         bytes calldata _param
-    ) external override onlyTokenization returns (uint tokenId){
+    ) external override onlyTokenization returns (uint256 tokenId){
         // 0. Decode parameters
         (uint256[] memory tokens, uint256[] memory amounts, uint256 _sequentialN, uint256 mintAmount)
         = abi.decode(_param, (uint256[], uint256[], uint256, uint256));
@@ -65,7 +65,7 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
         // 2. Store states
         SynthFT storage ft = tokenInfos[tokenId];
         ft.totalSupply += mintAmount;
-        for (uint i = 0; i < tokens.length; ++i) {
+        for (uint256 i = 0; i < tokens.length; ++i) {
             if (ft.underlyingTokens.length <= i) {
                 ft.underlyingTokens.push(tokens[i]);
                 ft.underlyingAmounts.push(amounts[i]);
@@ -87,11 +87,11 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
     /// @param _caller The caller of unwrapping. It is same of tokenization module's msg.sender.
     /// @param _tokenId The token id to unwrap.
     /// @param _amount The amount of unwrap.
-    function unwrap(address _caller, uint _tokenId, uint _amount) external override onlyTokenization {
+    function unwrap(address _caller, uint256 _tokenId, uint256 _amount) external override onlyTokenization {
         // 0. Calculate portion of underlying asset
         SynthFT memory ft = tokenInfos[_tokenId];
         uint256[] memory amounts = new uint256[](ft.underlyingAmounts.length);
-        for (uint i = 0; i < amounts.length; ++i) {
+        for (uint256 i = 0; i < amounts.length; ++i) {
             amounts[i] = ft.underlyingAmounts[i] * _amount / ft.totalSupply;
             ft.underlyingAmounts[i] -= amounts[i];
         }
@@ -109,10 +109,10 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
     /// @dev Return value of token by id and amount.
     /// @param _tokenId The token ID to be valued.
     /// @param _amount The amount of token to be valued.
-    function getValue(uint _tokenId, uint _amount) public view override returns (uint){
+    function getValue(uint256 _tokenId, uint256 _amount) public view override returns (uint){
         SynthFT memory token = tokenInfos[_tokenId];
-        uint totalValue = 0;
-        for (uint i = 0; i < token.underlyingTokens.length; ++i) {
+        uint256 totalValue = 0;
+        for (uint256 i = 0; i < token.underlyingTokens.length; ++i) {
             totalValue += tokenization.getValue(token.underlyingTokens[i], token.underlyingAmounts[i]);
         }
         return totalValue * _amount / token.totalSupply;
@@ -124,12 +124,12 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
     /// @param _amount The amount of token to be valued.
     function getValueAsCollateral(
         address _lendingProtocol,
-        uint _tokenId,
-        uint _amount
+        uint256 _tokenId,
+        uint256 _amount
     ) public view override returns (uint) {
         SynthFT memory token = tokenInfos[_tokenId];
-        uint totalValue = 0;
-        for (uint i = 0; i < token.underlyingTokens.length; ++i) {
+        uint256 totalValue = 0;
+        for (uint256 i = 0; i < token.underlyingTokens.length; ++i) {
             totalValue += tokenization.getValueAsCollateral(
                 _lendingProtocol,
                 token.underlyingTokens[i],
@@ -145,12 +145,12 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
     /// @param _amount The amount of token to be valued. If NFT token, it should be 1.
     function getValueAsDebt(
         address _lendingProtocol,
-        uint _tokenId,
-        uint _amount
+        uint256 _tokenId,
+        uint256 _amount
     ) public view override returns (uint) {
         SynthFT memory token = tokenInfos[_tokenId];
-        uint totalValue = 0;
-        for (uint i = 0; i < token.underlyingTokens.length; ++i) {
+        uint256 totalValue = 0;
+        for (uint256 i = 0; i < token.underlyingTokens.length; ++i) {
             totalValue += tokenization.getValueAsDebt(
                 _lendingProtocol,
                 token.underlyingTokens[i],
@@ -160,7 +160,7 @@ contract SyntheticFT is IWrapper, OwnableUpgradeable, ERC1155HolderUpgradeable, 
         return totalValue * _amount / token.totalSupply;
     }
 
-    function getTokenInfo(uint _tokenId) external view returns (uint[] memory tokens, uint[] memory amounts){
+    function getTokenInfo(uint256 _tokenId) external view returns (uint256[] memory tokens, uint256[] memory amounts){
         return (tokenInfos[_tokenId].underlyingTokens, tokenInfos[_tokenId].underlyingAmounts);
     }
 

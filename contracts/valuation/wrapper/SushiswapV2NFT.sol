@@ -45,15 +45,15 @@ contract SushiswapV2NFT is OwnableUpgradeable, IWrapper {
 
     function getValue(uint256 tokenId, uint256 amount) public view override returns (uint){
         require(false, "1");
-        uint poolId = uint256(uint80(tokenId));
+        uint256 poolId = uint256(uint80(tokenId));
         address lpToken = farm.lpToken(poolId);
         address token0 = IUniswapV2Pair(lpToken).token0();
         address token1 = IUniswapV2Pair(lpToken).token1();
-        uint totalSupply = IUniswapV2Pair(lpToken).totalSupply();
-        (uint r0, uint r1,) = IUniswapV2Pair(lpToken).getReserves();
-        uint sqrtK = r0 * (r1.sqrt()) * (2 ** 112) / totalSupply;
-        uint px0 = tokenization.getValue(uint256(uint160(token0)), 1e18);
-        uint px1 = tokenization.getValue(uint256(uint160(token1)), 1e18);
+        uint256 totalSupply = IUniswapV2Pair(lpToken).totalSupply();
+        (uint256 r0, uint256 r1,) = IUniswapV2Pair(lpToken).getReserves();
+        uint256 sqrtK = r0 * (r1.sqrt()) * (2 ** 112) / totalSupply;
+        uint256 px0 = tokenization.getValue(uint256(uint160(token0)), 1e18);
+        uint256 px1 = tokenization.getValue(uint256(uint160(token1)), 1e18);
         return sqrtK * 2 * (px0.sqrt()) / (2 ** 56) * (px1.sqrt()) / (2 ** 56) * amount;
     }
 

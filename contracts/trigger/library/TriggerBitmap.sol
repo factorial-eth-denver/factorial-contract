@@ -39,10 +39,10 @@ library TriggerBitmap {
 
     function findFirstEmptySpace(
         mapping(uint256 => uint) storage self,
-        uint maxBitmapId
+        uint256 maxBitmapId
     ) internal view returns (uint256 nextContractId){
         uint16 bitMapIdx = 0;
-        uint curBitmap;
+        uint256 curBitmap;
         while (true) {
             curBitmap = ~self[bitMapIdx];
             if (curBitmap == 0) {

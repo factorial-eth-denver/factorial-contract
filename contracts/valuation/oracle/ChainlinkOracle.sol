@@ -15,7 +15,7 @@ contract ChainlinkOracle is IPriceOracle, OwnableUpgradeable {
     /// ----- ADMIN FUNCTIONS -----
     function setPriceFeed(address[] calldata _tokens, address[] calldata _feeds) external onlyOwner {
         require(_tokens.length == _feeds.length, 'tokens & refs length mismatched');
-        for (uint idx = 0; idx < _tokens.length; idx++) {
+        for (uint256 idx = 0; idx < _tokens.length; idx++) {
             priceFeeds[_tokens[idx]] = _feeds[idx];
         }
     }
@@ -23,8 +23,8 @@ contract ChainlinkOracle is IPriceOracle, OwnableUpgradeable {
     /// ----- VIEW FUNCTIONS -----
     /// @dev Get token price using oracle.
     /// @param _token Token address to get price.
-    function getPrice(address _token) external view returns (uint price) {
-        uint decimals = uint(IERC20Ex(_token).decimals());
+    function getPrice(address _token) external view returns (uint256 price) {
+        uint256 decimals = uint(IERC20Ex(_token).decimals());
         (, int answer, , ,) = AggregatorV3Interface(priceFeeds[_token]).latestRoundData();
         return uint(answer) / (10 ** (18 - decimals));
     }

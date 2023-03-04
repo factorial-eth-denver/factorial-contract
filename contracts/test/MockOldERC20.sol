@@ -71,7 +71,7 @@ contract MockOldERC20 {
         return true;
     }
 
-    function mint(address to, uint amount) public {
+    function mint(address to, uint256 amount) public {
         _mint(to, amount);
     }
 

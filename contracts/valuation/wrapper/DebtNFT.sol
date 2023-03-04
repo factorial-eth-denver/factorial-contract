@@ -59,7 +59,7 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper, Fact
         (uint256 collateralToken, uint256 collateralAmount, address liquidationModule)
         = abi.decode(_param, (uint256, uint256, address));
 
-        uint tokenId = (uint256(_tokenType) << 232) + (sequentialN++ << 160) + uint256(uint160(_caller));
+        uint256 tokenId = (uint256(_tokenType) << 232) + (sequentialN++ << 160) + uint256(uint160(_caller));
 
         // Store states
         tokenInfos[tokenId] = DebtToken(
@@ -74,33 +74,33 @@ contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper, Fact
         return tokenId;
     }
 
-    function unwrap(address _caller, uint _tokenId, uint _amount) external override onlyTokenization {
+    function unwrap(address _caller, uint256 _tokenId, uint256 _amount) external override onlyTokenization {
         DebtToken memory nft = tokenInfos[_tokenId];
         asset.burn(_caller, _tokenId, 1);
         asset.safeTransferFrom(address(this), _caller, nft.collateralToken, nft.collateralAmount, '');
         delete tokenInfos[_tokenId];
     }
 
-    function getValue(uint _tokenId, uint) public view override returns (uint){
+    function getValue(uint256 _tokenId, uint) public view override returns (uint){
         DebtToken memory nft = tokenInfos[_tokenId];
-        uint collateralValue = tokenization.getValue(nft.collateralToken, nft.collateralAmount);
-        (uint debtTokenId, uint debtAmount) = ILending(address(uint160(_tokenId))).getDebt(_tokenId);
-        uint debTokenValue = tokenization.getValue(debtTokenId, debtAmount);
+        uint256 collateralValue = tokenization.getValue(nft.collateralToken, nft.collateralAmount);
+        (uint256 debtTokenId, uint256 debtAmount) = ILending(address(uint160(_tokenId))).getDebt(_tokenId);
+        uint256 debTokenValue = tokenization.getValue(debtTokenId, debtAmount);
         if (collateralValue < debTokenValue) {
             return 0;
         }
         return collateralValue - debTokenValue;
     }
 
-    function getValueWithFactor(address _lendingProtocol, uint _tokenId, uint) public view returns (uint){
+    function getValueWithFactor(address _lendingProtocol, uint256 _tokenId, uint) public view returns (uint){
         DebtToken memory nft = tokenInfos[_tokenId];
-        uint collateralValue = tokenization.getValueAsCollateral(
+        uint256 collateralValue = tokenization.getValueAsCollateral(
             _lendingProtocol,
             nft.collateralToken,
             nft.collateralAmount
         );
-        (uint debtTokenId, uint debtAmount) = ILending(address(uint160(_tokenId))).getDebt(_tokenId);
-        uint debtValue = tokenization.getValueAsDebt(
+        (uint256 debtTokenId, uint256 debtAmount) = ILending(address(uint160(_tokenId))).getDebt(_tokenId);
+        uint256 debtValue = tokenization.getValueAsDebt(
             _lendingProtocol,
             debtTokenId,
             debtAmount

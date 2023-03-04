@@ -11,7 +11,7 @@ contract TestHelper {
         return uint256(uint160(_tokenAddress));
     }
 
-    function combineToId(uint24 _tokenType, uint _sequentialN, address _address) external pure returns (uint256) {
+    function combineToId(uint24 _tokenType, uint256 _sequentialN, address _address) external pure returns (uint256) {
         return (uint256(_tokenType) << 232) + (_sequentialN << 160) + uint256(uint160(_address));
     }
 }
