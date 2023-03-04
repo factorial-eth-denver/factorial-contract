@@ -26,6 +26,6 @@ contract ChainlinkOracle is IPriceOracle, OwnableUpgradeable {
     function getPrice(address _token) external view returns (uint256 price) {
         uint256 decimals = uint(IERC20Ex(_token).decimals());
         (, int answer, , ,) = AggregatorV3Interface(priceFeeds[_token]).latestRoundData();
-        return uint(answer) / (10 ** (18 - decimals));
+        return uint(answer) * (10 ** (18 - decimals));
     }
 }
