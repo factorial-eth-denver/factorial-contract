@@ -16,6 +16,10 @@ interface ISwapConnector {
 
     function getLP(uint _tokenA, uint _tokenB) external view returns (uint256);
 
+    function getUnderlyingLp(uint256 _tokenId) external view returns (uint256);
+
+    function getUnderlyingAssets(uint256 _lp) external view returns (uint256, uint256);
+
     function getNextTokenId(uint _pid) external view returns (uint256);
 
     function getReserves(uint _tokenA, uint _tokenB) external view returns (uint, uint);
