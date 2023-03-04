@@ -253,6 +253,18 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         return uint256(uint160(IUniswapV2Factory(sushiRouter.factory()).getPair(_tokenA.toAddress(), _tokenB.toAddress())));
     }
 
+    function getUnderlyingLp(uint256 _tokenId) external view override returns (uint256) {
+        uint256 pid = uint256(uint80(_tokenId));
+        address lp = miniChef.lpToken(pid);
+        return uint256(uint160(lp));
+    }
+
+    function getUnderlyingAssets(uint256 _lp) external view override returns (uint256, uint256) {
+        address token0 = IUniswapV2Pair(_lp.toAddress()).token0();
+        address token1 = IUniswapV2Pair(_lp.toAddress()).token1();
+        return (uint256(uint160(token0)), uint256(uint160(token1)));
+    }
+
     function getNextTokenId(uint256 _pid) public view override returns (uint256) {
         uint24 connectionId = connectionBitMap.findFirstEmptySpace(connectionPool.getConnectionMax() / 256);
         return (wrapperTokenType << 232) + (uint256(connectionId) << 80) + (_pid);

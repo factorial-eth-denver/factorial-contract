@@ -16,15 +16,23 @@ import "../../interfaces/ISwapConnector.sol";
 
 contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
     struct BorrowCache {
-        bool init;
-        uint256[] collateralAssets;
-        uint256[] collateralAmounts;
+        address caller;
+        uint256[] inputAssets;
+        uint256[] inputAmounts;
+        uint256 debtAsset;
+        uint256 debtAmount;
+    }
+
+    struct RepayCache {
+        address caller;
+        uint256 collateralAsset;
+        uint256 collateralAmount;
         uint256 debtAsset;
         uint256 debtAmount;
     }
 
     BorrowCache public borrowCache;
-    BorrowCache public repayCache;
+    RepayCache public repayCache;
     DebtNFT public debtNFT;
     ILending public lending;
     address public sushiConnector;
@@ -41,7 +49,6 @@ contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
     mapping(address => mapping(address => uint256)) public tokenToPool;
     mapping(uint256 => uint256) public lpToPool;
 
-
     function initialize(
         address _asset,
         address _lending,
@@ -52,6 +59,7 @@ contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         debtNFT = DebtNFT(_deptNFT);
         sushiConnector = _sushi;
     }
+
     // 깊은게 아니라 단순 토큰0을 담보로 토큰1을 빌려서 페어를 넣는다.
     function open(
         uint256[] memory assets,
@@ -59,29 +67,37 @@ contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         uint256 debtAsset,
         uint256 debtAmount
     ) public {
-        require(borrowCache.init == false, "already borrowed");
-        borrowCache = BorrowCache(true, assets, amounts, debtAsset, debtAmount);
-        for (uint256 i = 0; i < assets.length; i++) {
-            asset.safeTransferFrom(msgSender(), address(this), assets[i], amounts[i], "");
-        }
+        // 0. Validate states
+        require(borrowCache.caller == address(0), "Already locked");
+        require(amounts[0] == debtAsset || amounts[1] == debtAsset, "Borrow token only for LP");
+
+        // 1. Caching params
+        borrowCache = BorrowCache(msgSender(), assets, amounts, debtAsset, debtAmount);
+
+        // 2. transfer assets from caller
+        asset.safeBatchTransferFrom(msgSender(), address(this), assets, amounts, "");
+
+        // 3. Borrow & callback
         uint256 pid = ISwapConnector(sushiConnector).getPoolId(assets[0], assets[1]);
         uint256 nextTokenId = ISwapConnector(sushiConnector).getNextTokenId(pid);
         uint256 id = lending.borrowAndCallback(nextTokenId, address(uint160(debtAsset)), debtAmount);
         asset.safeTransferFrom(address(this), msgSender(), id, 1, "");
+
+        // 4. Delete cache
         delete borrowCache;
     }
 
     function borrowCallback() public override {
         /// 0. Declare local variable.
-        uint256 collateralA = borrowCache.collateralAssets[0];
-        uint256 collateralB = borrowCache.collateralAssets[1];
+        uint256 collateralA = borrowCache.inputAssets[0];
+        uint256 collateralB = borrowCache.inputAssets[1];
         uint256 debtToken = borrowCache.debtAsset;
-        uint256 amtA = borrowCache.collateralAmounts[0];
-        uint256 amtB = borrowCache.collateralAmounts[1];
+        uint256 amtA = borrowCache.inputAmounts[0];
+        uint256 amtB = borrowCache.inputAmounts[1];
 
         /// 1. Validate states
-        require(borrowCache.init == true, "not borrowed");
-        require(collateralA == debtToken || collateralB == debtToken, "Debt token only for LP");
+        require(borrowCache.caller != address(0), "Unlocked");
+        require(collateralA == debtToken || collateralB == debtToken, "Borrow token only for LP");
 
         /// 2. Optimal swap before deposit
         {
@@ -92,7 +108,7 @@ contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
             }
 
             (uint256 swapAmt, bool isReversed) = ISwapConnector(sushiConnector).optimalSwapAmount(collateralA, collateralB, amtA, amtB);
-            if(isReversed) {
+            if (isReversed) {
                 int[] memory swapOutput = IDexConnector(sushiConnector).sell(collateralA, collateralB, swapAmt, 0);
                 amtA -= swapAmt;
                 amtB += uint256(swapOutput[1]);
@@ -104,7 +120,7 @@ contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         }
 
         /// 3. Mint LP token
-        uint256 mintedLP;
+        uint256 lpAmount;
         {
             uint256[] memory mintTokens = new uint256[](2);
             mintTokens[0] = collateralA;
@@ -112,44 +128,88 @@ contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
             uint256[] memory mintAmounts = new uint256[](2);
             mintAmounts[0] = amtA;
             mintAmounts[1] = amtB;
-            ISwapConnector(sushiConnector).mint(mintTokens, mintAmounts);
+            lpAmount = ISwapConnector(sushiConnector).mint(mintTokens, mintAmounts);
         }
 
         /// 4. Deposit & Transfer NFT to user.
         {
             uint256 poolId = ISwapConnector(sushiConnector).getPoolId(collateralA, collateralB);
-            uint256 tokenId = ISwapConnector(sushiConnector).depositNew(poolId, mintedLP);
+            uint256 tokenId = ISwapConnector(sushiConnector).depositNew(poolId, lpAmount);
             asset.safeTransferFrom(address(this), msg.sender, tokenId, 1, "");
         }
     }
 
     function close(uint256 debtId, uint256 ratioReturnToken) public {
-        require(repayCache.init == false, "already repaid");
-        repayCache.init = true;
-        // (uint256 collateralToken, uint256 collateralAmount, ) = debtNFT
-        //     .tokenInfos(debtId);
-        // (uint256 debtAsset, uint256 debtAmount) = lending.getDebt(debtId);
-        // repayCache = BorrowCache(true, collateralToken, collateralAmount, debtAsset, debtAmount);
+        /// 0. Validate states
+        require(repayCache.caller == address(0), "Already locked");
+
+        /// 1. Caching params
+        (uint256 collateralToken, uint256 collateralAmount,) = debtNFT.tokenInfos(debtId);
+        (uint256 debtAsset, uint256 debtAmount) = lending.getDebt(debtId);
+        repayCache = RepayCache(msgSender(), collateralToken, collateralAmount, debtAsset, debtAmount);
+
+        /// 2. transfer asset from sender
         asset.safeTransferFrom(msgSender(), address(lending), debtId, 1, "");
+
+        /// 3. Repay & callback
         lending.repayAndCallback(debtId);
-        repayCache.init = false;
+
+        /// 4. Delete cache
         delete repayCache;
     }
 
     function repayCallback() public override {
-        require(repayCache.init == true, "not repaid");
-        // uint256 beforeBalance = asset.balanceOf(address(this), repayCache.collateralAsset);
-        // Optimal Swap!! (+ debt)
-        // sushi.buy(repayCache.collateralAsset, repayCache.debtAsset, repayCache.debtAmount, 0);
-        // uint256 afterBalance = beforeBalance - asset.balanceOf(address(this), repayCache.collateralAsset);
-        // uint256 returnAmount = repayCache.collateralAmount - (beforeBalance - afterBalance);
-        uint256[] memory returnTokens = new uint256[](2);
-        uint256[] memory returnAmounts = new uint256[](2);
-        asset.safeTransferFrom(address(this), msg.sender, repayCache.debtAsset, repayCache.debtAmount, "");
-        for (uint256 i = 0; i < returnTokens.length; i++) {
-            asset.safeTransferFrom(address(this), msg.sender, returnTokens[i], returnAmounts[i], "");
+        /// 0. Validate states
+        require(repayCache.caller != address(0), "Unlocked");
+
+        /// 1. Declare local variable.
+        uint256 debtToken = repayCache.debtAsset;
+        uint256 debtAmount = repayCache.debtAmount;
+        uint256 lp = ISwapConnector(sushiConnector).getUnderlyingLp(repayCache.collateralAsset);
+        (uint256 assetA, uint assetB) = ISwapConnector(sushiConnector).getUnderlyingAssets(lp);
+
+        /// 2. Withdraw & burn
+        ISwapConnector(sushiConnector).withdraw(repayCache.collateralAsset, repayCache.collateralAmount);
+        uint256[] memory assets = new uint256[](2);
+        assets[0] = assetA;
+        assets[1] = assetB;
+        (uint256 amtA, uint256 amtB) = ISwapConnector(sushiConnector).burn(assets, repayCache.collateralAmount);
+
+        /// 3. Swap for repay
+        if (assetA == debtToken) {
+            if (amtA >= debtAmount) {
+                amtA -= debtAmount;
+                debtAmount = 0;
+            } else {
+                debtAmount -= amtA;
+                amtA = 0;
+            }
+            if (debtAmount > 0) {
+                int[] memory swapOutput = IDexConnector(sushiConnector).buy(assetB, assetA, debtAmount, 0);
+                amtB -= uint(swapOutput[0]);
+            }
+        } else {
+            if (amtB >= debtAmount) {
+                amtB -= debtAmount;
+                debtAmount = 0;
+            } else {
+                debtAmount -= amtB;
+                amtB = 0;
+            }
+            if (debtAmount > 0) {
+                int[] memory swapOutput = IDexConnector(sushiConnector).buy(assetA, assetB, debtAmount, 0);
+                amtA -= uint(swapOutput[0]);
+            }
         }
-        repayCache.init = false;
+
+        /// 4. Repay debt & transfer remaining assets to owner
+        {
+            asset.safeTransferFrom(address(this), msg.sender, repayCache.debtAsset, repayCache.debtAmount, "");
+            uint256[] memory remainAmounts = new uint256[](2);
+            remainAmounts[0] = amtA;
+            remainAmounts[1] = amtB;
+            asset.safeBatchTransferFrom(address(this), repayCache.caller, assets, remainAmounts, "");
+        }
     }
 
     function _checkAndCreateSushiPool(
