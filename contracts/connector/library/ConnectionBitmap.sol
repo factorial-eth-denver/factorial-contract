@@ -37,10 +37,10 @@ library ConnectionBitmap {
 
     function findFirstEmptySpace(
         mapping(uint24 => uint) storage self,
-        uint maxBitmapId
+        uint256 maxBitmapId
     ) internal view returns (uint24 nextContractId){
         uint16 bitMapIdx = 0;
-        uint curBitmap;
+        uint256 curBitmap;
         while (true) {
             curBitmap = ~self[bitMapIdx];
             if (curBitmap == 0) {

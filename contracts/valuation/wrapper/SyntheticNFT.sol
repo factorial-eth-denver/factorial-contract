@@ -60,7 +60,7 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable,
     ) external override onlyTokenization returns (uint){
         (uint256[] memory tokens, uint256[] memory amounts) = abi.decode(_param, (uint256[], uint256[]));
 
-        uint tokenId = (uint256(_tokenType) << 232) + (sequentialN++ << 160) + uint256(uint160(_caller));
+        uint256 tokenId = (uint256(_tokenType) << 232) + (sequentialN++ << 160) + uint256(uint160(_caller));
 
         // Store states
         SynthNFT storage token = tokenInfos[tokenId];
@@ -77,7 +77,7 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable,
     /// @dev Unwrap NFT to multi asset.
     /// @param _caller The caller of unwrapping. It is same of tokenization module's msg.sender.
     /// @param _tokenId The token id to unwrap.
-    function unwrap(address _caller, uint _tokenId, uint) external override onlyTokenization {
+    function unwrap(address _caller, uint256 _tokenId, uint) external override onlyTokenization {
         SynthNFT memory nft = tokenInfos[_tokenId];
         asset.safeBatchTransferFrom(address(this), _caller, nft.underlyingTokens, nft.underlyingAmounts, '');
         asset.burn(_caller, _tokenId, 1);
@@ -87,10 +87,10 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable,
     /// ----- VIEW FUNCTIONS -----
     /// @dev Return value of token by id and amount.
     /// @param _tokenId The token ID to be valued.
-    function getValue(uint _tokenId, uint) public view override returns (uint){
+    function getValue(uint256 _tokenId, uint) public view override returns (uint){
         SynthNFT memory token = tokenInfos[_tokenId];
-        uint totalValue = 0;
-        for (uint i = 0; i < token.underlyingTokens.length; ++i) {
+        uint256 totalValue = 0;
+        for (uint256 i = 0; i < token.underlyingTokens.length; ++i) {
             totalValue += tokenization.getValue(token.underlyingTokens[i], token.underlyingAmounts[i]);
         }
         return totalValue;
@@ -99,10 +99,10 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable,
     /// @dev Return token value as collateral. For debt token wrapper.
     /// @param _lendingProtocol The lending protocol address for using custom factor.
     /// @param _tokenId The token ID to be valued.
-    function getValueAsCollateral(address _lendingProtocol, uint _tokenId, uint) public view override returns (uint) {
+    function getValueAsCollateral(address _lendingProtocol, uint256 _tokenId, uint) public view override returns (uint) {
         SynthNFT memory token = tokenInfos[_tokenId];
-        uint totalValue = 0;
-        for (uint i = 0; i < token.underlyingTokens.length; ++i) {
+        uint256 totalValue = 0;
+        for (uint256 i = 0; i < token.underlyingTokens.length; ++i) {
             totalValue += tokenization.getValueAsCollateral(
                 _lendingProtocol,
                 token.underlyingTokens[i],
@@ -115,10 +115,10 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable,
     /// @dev Return token value as debt. For debt token wrapper.
     /// @param _lendingProtocol The lending protocol address for using custom factor.
     /// @param _tokenId The token ID to be valued.
-    function getValueAsDebt(address _lendingProtocol, uint _tokenId, uint) public view override returns (uint) {
+    function getValueAsDebt(address _lendingProtocol, uint256 _tokenId, uint) public view override returns (uint) {
         SynthNFT memory token = tokenInfos[_tokenId];
-        uint totalValue = 0;
-        for (uint i = 0; i < token.underlyingTokens.length; ++i) {
+        uint256 totalValue = 0;
+        for (uint256 i = 0; i < token.underlyingTokens.length; ++i) {
             totalValue += tokenization.getValueAsDebt(
                 _lendingProtocol,
                 token.underlyingTokens[i],
@@ -128,7 +128,7 @@ contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable,
         return totalValue;
     }
 
-    function getTokenInfo(uint _tokenId) external view returns (uint[] memory tokens, uint[] memory amounts){
+    function getTokenInfo(uint256 _tokenId) external view returns (uint256[] memory tokens, uint256[] memory amounts){
         return (tokenInfos[_tokenId].underlyingTokens, tokenInfos[_tokenId].underlyingAmounts);
     }
 

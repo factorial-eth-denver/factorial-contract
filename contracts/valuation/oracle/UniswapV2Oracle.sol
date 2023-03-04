@@ -32,11 +32,11 @@ contract UniswapV2Oracle is OwnableUpgradeable, IPriceOracle {
         }
         address token0 = IUniswapV2Pair(_token).token0();
         address token1 = IUniswapV2Pair(_token).token1();
-        uint totalSupply = IUniswapV2Pair(_token).totalSupply();
-        (uint r0, uint r1,) = IUniswapV2Pair(_token).getReserves();
-        uint sqrtK = r0 * (r1.sqrt()) * (2 ** 112) / totalSupply;
-        uint px0 = IPriceOracle(source).getPrice(token0);
-        uint px1 = IPriceOracle(source).getPrice(token1);
+        uint256 totalSupply = IUniswapV2Pair(_token).totalSupply();
+        (uint256 r0, uint256 r1,) = IUniswapV2Pair(_token).getReserves();
+        uint256 sqrtK = r0 * (r1.sqrt()) * (2 ** 112) / totalSupply;
+        uint256 px0 = IPriceOracle(source).getPrice(token0);
+        uint256 px1 = IPriceOracle(source).getPrice(token1);
         return sqrtK * 2 * (px0.sqrt()) / (2 ** 56) * (px1.sqrt()) / (2 ** 56);
     }
 
@@ -45,11 +45,11 @@ contract UniswapV2Oracle is OwnableUpgradeable, IPriceOracle {
     /// @param _token Token address to get price.
     /// @param _pair Source pool address
     function getPrice(address _token, address _pair) public view returns (uint) {
-        (uint rA, uint rB,) = IUniswapV2Pair(_pair).getReserves();
+        (uint256 rA, uint256 rB,) = IUniswapV2Pair(_pair).getReserves();
         address tokenA = IUniswapV2Pair(_pair).token0();
         address tokenB = IUniswapV2Pair(_pair).token1();
 
-        uint decimals = IERC20Ex(_token).decimals();
+        uint256 decimals = IERC20Ex(_token).decimals();
 
         if (tokenA == _token) {
             if (decimals > 18) {

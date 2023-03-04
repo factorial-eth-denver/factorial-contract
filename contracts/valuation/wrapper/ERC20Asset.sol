@@ -27,15 +27,15 @@ contract ERC20Asset is IWrapper, OwnableUpgradeable {
         revert('Not supported');
     }
 
-    function getValue(uint _tokenId, uint _amount) external view override returns (uint) {
+    function getValue(uint256 _tokenId, uint256 _amount) external view override returns (uint) {
         return oracle.getPrice(address(uint160(_tokenId))) * _amount;
     }
 
-    function getValueAsCollateral(address, uint _tokenId, uint _amount) public view override returns (uint) {
+    function getValueAsCollateral(address, uint256 _tokenId, uint256 _amount) public view override returns (uint) {
         return oracle.getPrice(address(uint160(_tokenId))) * _amount;
     }
 
-    function getValueAsDebt(address, uint _tokenId, uint _amount) public view override returns (uint) {
+    function getValueAsDebt(address, uint256 _tokenId, uint256 _amount) public view override returns (uint) {
         return oracle.getPrice(address(uint160(_tokenId))) * _amount;
     }
 

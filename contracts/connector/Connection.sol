@@ -41,7 +41,7 @@ contract Connection is IConnection{
         return returndata;
     }
 
-    function doTransfer(address _token, address _to, uint _amount) external {
+    function doTransfer(address _token, address _to, uint256 _amount) external {
         IERC20Upgradeable(_token).safeTransfer(_to, _amount);
     }
 }

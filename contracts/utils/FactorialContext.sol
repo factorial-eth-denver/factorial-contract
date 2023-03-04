@@ -28,7 +28,7 @@ abstract contract FactorialContext is IFactorialModule{
         return msg.sender;
     }
 
-    function doTransfer(address _token, address _to, uint _amount) external override {
+    function doTransfer(address _token, address _to, uint256 _amount) external override {
         require(msg.sender == address(asset), 'Only asset');
         IERC20Upgradeable(_token).safeTransfer(_to, _amount);
     }

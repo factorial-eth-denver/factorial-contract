@@ -46,7 +46,7 @@ contract FactorialAsset is Initializable, ContextUpgradeable, ERC165Upgradeable,
     /// @dev Register whitelisted factorial modules. This modules can hold & transfer ERC20 asset.
     /// @param _factorialModules The factorial modules to register.
     function registerFactorialModules(address[] calldata _factorialModules) external onlyFactorialModule {
-        for (uint i = 0; i < _factorialModules.length; ++i) {
+        for (uint256 i = 0; i < _factorialModules.length; ++i) {
             factorialModules[_factorialModules[i]] = true;
         }
     }
@@ -414,7 +414,7 @@ contract FactorialAsset is Initializable, ContextUpgradeable, ERC165Upgradeable,
         uint256[] memory,
         bytes memory
     ) internal {
-        for (uint i; i < ids.length; ++i) {
+        for (uint256 i; i < ids.length; ++i) {
             if (ids[i] >> 255 == 1) {
                 ownerOf[ids[i]] = to;
             }

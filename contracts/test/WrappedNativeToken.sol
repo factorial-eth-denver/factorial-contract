@@ -12,13 +12,13 @@ contract WrappedNativeToken {
         balanceOf[msg.sender] += msg.value;
     }
 
-    function withdraw(uint amount) public {
+    function withdraw(uint256 amount) public {
         require(balanceOf[msg.sender] >= amount);
         balanceOf[msg.sender] -= amount;
         payable(msg.sender).transfer(amount);
     }
 
-    function approve(address spender, uint amount) public returns (bool) {
+    function approve(address spender, uint256 amount) public returns (bool) {
         allowance[msg.sender][spender] = amount;
         return true;
     }

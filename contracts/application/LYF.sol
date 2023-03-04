@@ -91,7 +91,7 @@ contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
                 amtB += borrowCache.debtAmount;
             }
 
-            (uint swapAmt, bool isReversed) = ISwapConnector(sushiConnector).optimalSwapAmount(collateralA, collateralB, amtA, amtB);
+            (uint256 swapAmt, bool isReversed) = ISwapConnector(sushiConnector).optimalSwapAmount(collateralA, collateralB, amtA, amtB);
             if(isReversed) {
                 int[] memory swapOutput = IDexConnector(sushiConnector).sell(collateralA, collateralB, swapAmt, 0);
                 amtA -= swapAmt;

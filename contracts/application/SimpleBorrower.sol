@@ -114,7 +114,7 @@ contract SimpleBorrower is IBorrowable, ERC1155HolderUpgradeable, FactorialConte
     {
         require(repayCache.init == true, "not repaid");
 
-        (uint[] memory tokens, uint[] memory amounts) =
+        (uint256[] memory tokens, uint256[] memory amounts) =
              syntheticNFT.getTokenInfo(repayCache.collateralAsset);
 
         tokenization.unwrap(

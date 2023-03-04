@@ -35,7 +35,7 @@ contract ConnectionPool is IConnectionPool, OwnableUpgradeable {
         connectors[_connector] = lastConnectorId;
     }
 
-    function increaseConnection(uint n) external {
+    function increaseConnection(uint256 n) external {
         address[] memory param = new address[](n);
         require(n <= 20, 'Over gas limit');
         require(n >= 1, 'Under minimum');
