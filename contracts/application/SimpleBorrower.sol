@@ -23,6 +23,14 @@ contract SimpleBorrower is IBorrowable, ERC1155HolderUpgradeable, FactorialConte
     BorrowCache public borrowCache;
     BorrowCache public repayCache;
 
+    struct BorrowCache {
+        bool init;
+        uint256 collateralAsset;
+        uint256 collateralAmount;
+        uint256 debtAsset;
+        uint256 debtAmount;
+    }
+
     function initialize(
         address _tokenization,
         address _asset,
@@ -106,7 +114,7 @@ contract SimpleBorrower is IBorrowable, ERC1155HolderUpgradeable, FactorialConte
     {
         require(repayCache.init == true, "not repaid");
 
-        (uint[] memory tokens, uint[] memory amounts) =
+        (uint256[] memory tokens, uint256[] memory amounts) =
              syntheticNFT.getTokenInfo(repayCache.collateralAsset);
 
         tokenization.unwrap(

@@ -38,7 +38,7 @@ contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, Factori
     // @dev Uniswap v3 factory.
     IUniswapV3Factory public factory;
     IConnectionPool public connectionPool;
-    uint public wrapperTokenType;
+    uint256 public wrapperTokenType;
     mapping(uint24 => uint256) public connectionBitMap;
 
     struct VariableCache {
@@ -61,7 +61,7 @@ contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, Factori
         address _asset,
         address _factory,
         address _connectionPool,
-        uint _wrapperTokenType
+        uint256 _wrapperTokenType
     ) external initContext(_asset) {
         factory = IUniswapV3Factory(_factory);
         wrapperTokenType = _wrapperTokenType;
@@ -127,9 +127,9 @@ contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, Factori
     }
 
     function sell(
-        uint _yourToken,
-        uint _wantToken,
-        uint _amount,
+        uint256 _yourToken,
+        uint256 _wantToken,
+        uint256 _amount,
         uint24 _fee
     ) external override returns (int[] memory amounts){
         amounts = new int[](2);
@@ -156,15 +156,15 @@ contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, Factori
     }
 
     function mint(
-        uint[] calldata _tokens,
-        uint[] calldata _amounts,
+        uint256[] calldata _tokens,
+        uint256[] calldata _amounts,
         uint24 _fee,
         int24 _tickLower,
         int24 _tickUpper
-    ) external override returns (uint tokenId){
+    ) external override returns (uint256 tokenId){
         cache.currentSwapPool = factory.getPool(_tokens[0].toAddress(), _tokens[1].toAddress(), _fee);
-        uint amount0;
-        uint amount1;
+        uint256 amount0;
+        uint256 amount1;
         if (_tokens[0].toAddress() == IUniswapV3Pool(cache.currentSwapPool).token0()) {
             cache.token0 = _tokens[0];
             cache.token1 = _tokens[1];
@@ -176,7 +176,7 @@ contract UniswapV3Connector is IDexConnector, IConcentratedDexConnector, Factori
             amount0 = _amounts[1];
             amount1 = _amounts[0];
         }
-        uint connectionId = occupyConnection();
+        uint256 connectionId = occupyConnection();
 
         uint160 lowerSqrtRatioX96 = TickMath.getSqrtRatioAtTick(_tickLower);
         uint160 upperSqrtRatioX96 = TickMath.getSqrtRatioAtTick(_tickUpper);

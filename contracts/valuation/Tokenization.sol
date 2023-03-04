@@ -51,7 +51,7 @@ contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable, Fac
     /// @param _tokenTypeOrId If erc20 asset, token id. If factorial asset, 24bit tokenType.
     /// @param _collateralFactor The collateral factor of token/wrapping sepc.
     /// @param _debtFactor The debt factor of token/wrapping spec.
-    function setGuideTokenFactor(uint256 _tokenTypeOrId, uint _collateralFactor, uint _debtFactor) external onlyOwner {
+    function setGuideTokenFactor(uint256 _tokenTypeOrId, uint256 _collateralFactor, uint256 _debtFactor) external onlyOwner {
         require(_collateralFactor < 10000 && _debtFactor > 10000);
         guideValuationFactors[_tokenTypeOrId] = ValuationFactor(
             _collateralFactor,
@@ -63,7 +63,7 @@ contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable, Fac
     /// @param _tokenTypeOrId If erc20 asset, token id. If factorial asset, 24bit tokenType.
     /// @param _collateralFactor The collateral factor of token/wrapping sepc.
     /// @param _debtFactor The debt factor of token/wrapping spec.
-    function setCustomTokenFactor(uint256 _tokenTypeOrId, uint _collateralFactor, uint _debtFactor) external {
+    function setCustomTokenFactor(uint256 _tokenTypeOrId, uint256 _collateralFactor, uint256 _debtFactor) external {
         require(_collateralFactor < 10000 && _debtFactor > 10000);
         customValuationFactors[msg.sender][_tokenTypeOrId] = ValuationFactor(
             _collateralFactor,
@@ -83,7 +83,7 @@ contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable, Fac
     /// @dev Unwrap token/assets from ERC1155 factorial token.
     /// @param _tokenId The ERC1155 factorial token id.
     /// @param _amount The amount of token to unwrap. If NFT token, it should be 1.
-    function unwrap(uint _tokenId, uint _amount) external override {
+    function unwrap(uint256 _tokenId, uint256 _amount) external override {
         uint24 tokenType = uint24(_tokenId >> 232);
         IWrapper(tokenWrapper[tokenType]).unwrap(msgSender(), _tokenId, _amount);
     }
@@ -92,7 +92,7 @@ contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable, Fac
     /// @dev Return value of token by id and amount.
     /// @param _tokenId The token ID to be valued.
     /// @param _amount The amount of token to be valued. If NFT token, it should be 1.
-    function getValue(uint _tokenId, uint _amount) external view override returns (uint) {
+    function getValue(uint256 _tokenId, uint256 _amount) external view override returns (uint) {
         uint24 tokenType = uint24(_tokenId >> 232);
         return IWrapper(tokenWrapper[tokenType]).getValue(_tokenId, _amount);
     }
@@ -101,7 +101,7 @@ contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable, Fac
     /// @param _lendingProtocol The lending protocol address. This is for custom factor.
     /// @param _tokenId The token ID to be valued.
     /// @param _amount The amount of token to be valued. If NFT token, it should be 1.
-    function getValueAsCollateral(address _lendingProtocol, uint _tokenId, uint _amount) external view returns (uint) {
+    function getValueAsCollateral(address _lendingProtocol, uint256 _tokenId, uint256 _amount) external view returns (uint) {
         uint256 tokenType = _tokenId >> 232;
         if (tokenType == 0) tokenType = _tokenId;
         uint256 customFactor = customValuationFactors[_lendingProtocol][tokenType].collateralFactor;
@@ -118,7 +118,7 @@ contract Tokenization is ITokenization, OwnableUpgradeable, UUPSUpgradeable, Fac
     /// @param _lendingProtocol The lending protocol address. This is for custom factor.
     /// @param _tokenId The token ID to be valued.
     /// @param _amount The amount of token to be valued. If NFT token, it should be 1.
-    function getValueAsDebt(address _lendingProtocol, uint _tokenId, uint _amount) external view returns (uint) {
+    function getValueAsDebt(address _lendingProtocol, uint256 _tokenId, uint256 _amount) external view returns (uint) {
         uint256 tokenType = _tokenId >> 232;
         if (tokenType == 0) tokenType = _tokenId;
         uint256 customFactor = customValuationFactors[_lendingProtocol][tokenType].debtFactor;

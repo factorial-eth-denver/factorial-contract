@@ -9,7 +9,7 @@ const fs = require('fs');
 import {ethers} from "hardhat";
 import hre from 'hardhat'
 import {
-    AssetManagement,
+    AssetManagement, ChainlinkOracle,
     ConnectionPool,
     DebtNFT,
     ERC20Asset,
@@ -48,6 +48,7 @@ async function main() {
     const testHelperFactory = await ethers.getContractFactory('TestHelper');
     const SushiConnectorFactory = await ethers.getContractFactory('SushiswapConnector');
     const SushiswapV2NFTFactory = await ethers.getContractFactory('SushiswapV2NFT');
+    const ChainlinkOracleFactory = await ethers.getContractFactory('ChainlinkOracle');
 
     let wmatic = await WrappedNativeToken__factory.connect(config.WMATIC, deployer);
     let sushi = await MockERC20__factory.connect(config.SUSHI, deployer);
@@ -68,6 +69,7 @@ async function main() {
     const connectionPool = await ConnectionPoolFactory.deploy() as ConnectionPool;
     const sushiNFT = await SushiswapV2NFTFactory.deploy() as SushiswapV2NFT;
     const sushiConnector = await SushiConnectorFactory.deploy() as SushiswapConnector;
+    const chainlinkOracle = await ChainlinkOracleFactory.deploy() as ChainlinkOracle;
     const helper = await testHelperFactory.deploy() as TestHelper;
 
     console.log("Deploy success ... 2/6 ");
@@ -83,6 +85,7 @@ async function main() {
     await syntheticNFT.initialize(tokenization.address, asset.address);
     await connectionPool.initialize(asset.address);
     await sushiNFT.initialize(tokenization.address, config.SUSHI_MINICHEF);
+    await chainlinkOracle.initialize();
 
     console.log("Deploy success ... 3/6 ");
     await sushi.approve(asset.address, MaxUint128);
@@ -92,11 +95,10 @@ async function main() {
 
     await oracleRouter.setRoute(
         [usdc.address, wmatic.address, sushi.address, wmatic_usdc_lp.address],
-        [simplePriceOracle.address, simplePriceOracle.address, simplePriceOracle.address, uniswapV2Oracle.address]
+        [chainlinkOracle.address, chainlinkOracle.address, simplePriceOracle.address, uniswapV2Oracle.address]
     );
 
-    await simplePriceOracle.setPrice(wmatic.address, '2000');
-    await simplePriceOracle.setPrice(usdc.address, '1000000000000');
+    await chainlinkOracle.setPriceFeed([wmatic.address, usdc.address], [config.CHAINLINK_MATIC_USD, config.CHAINLINK_USDC_USD]);
     await simplePriceOracle.setPrice(sushi.address, '1000000000');
     await simplePriceOracle.setPrice(wmatic_usdc_lp.address, uniswapV2Oracle.address);
 

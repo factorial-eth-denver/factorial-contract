@@ -4,10 +4,10 @@ pragma solidity ^0.8.0;
 library Math {
     // implementation from https://github.com/Uniswap/uniswap-lib/commit/99f3f28770640ba1bb1ff460ac7c5292fb8291a0
     // original implementation: https://github.com/abdk-consulting/abdk-libraries-solidity/blob/master/ABDKMath64x64.sol#L687
-    function sqrt(uint x) internal pure returns (uint) {
+    function sqrt(uint256 x) internal pure returns (uint) {
         if (x == 0) return 0;
-        uint xx = x;
-        uint r = 1;
+        uint256 xx = x;
+        uint256 r = 1;
 
         if (xx >= 0x100000000000000000000000000000000) {
             xx >>= 128;
@@ -45,7 +45,7 @@ library Math {
         r = (r + x / r) >> 1;
         r = (r + x / r) >> 1;
         r = (r + x / r) >> 1; // Seven iterations should be enough
-        uint r1 = x / r;
+        uint256 r1 = x / r;
         return (r < r1 ? r : r1);
     }
 }

@@ -8,7 +8,7 @@ import "../../interfaces/external/IMiniChef.sol";
 contract MockSushi is IMiniChef {
     address public SUSHI;
     address public mockLpToken;
-    uint public amount;
+    uint256 public amount;
 
     constructor(address _sushi, address _lpToken) {
         SUSHI = _sushi;
@@ -17,51 +17,51 @@ contract MockSushi is IMiniChef {
 
     /// Mock Router
     function swapTokensForExactTokens(
-        uint _amountOut,
+        uint256 _amountOut,
         uint,
         address[] calldata _path,
         address,
         uint
-    ) external returns (uint[] memory amounts){
+    ) external returns (uint256[] memory amounts){
         IERC20(_path[0]).transferFrom(msg.sender, address(this), _amountOut);
         IERC20(_path[1]).transfer(msg.sender, _amountOut);
-        amounts = new uint[](2);
+        amounts = new uint256[](2);
         amounts[1] = _amountOut;
     }
 
     function swapExactTokensForTokens(
-        uint _amountIn,
+        uint256 _amountIn,
         uint,
         address[] calldata _path,
         address,
         uint
-    ) external returns (uint[] memory amounts){
+    ) external returns (uint256[] memory amounts){
         IERC20(_path[0]).transferFrom(msg.sender, address(this), _amountIn);
         IERC20(_path[1]).transfer(msg.sender, _amountIn);
-        amounts = new uint[](2);
+        amounts = new uint256[](2);
         amounts[1] = _amountIn;
     }
 
     /// Mock Master Chef
-    function poolInfo(uint pid) external view override returns (uint, uint, uint) {
+    function poolInfo(uint256 pid) external view override returns (uint, uint, uint) {
         return (0, 0, 0);
     }
 
-    function lpToken(uint pid) external view override returns (address) {
+    function lpToken(uint256 pid) external view override returns (address) {
         return mockLpToken;
     }
 
-    function deposit(uint, uint _amount, address) external override {
+    function deposit(uint, uint256 _amount, address) external override {
         amount += _amount;
         IERC20(mockLpToken).transferFrom(msg.sender, address(this), _amount);
     }
 
-    function withdraw(uint, uint _amount, address) external override {
+    function withdraw(uint, uint256 _amount, address) external override {
         amount -= _amount;
         IERC20(mockLpToken).transfer(msg.sender, _amount);
     }
 
-    function userInfo(uint pid, address user) external view returns (uint amount, uint rewardDebt) {
+    function userInfo(uint256 pid, address user) external view returns (uint256 amount, uint256 rewardDebt) {
         return (amount, 0);
     }
 }

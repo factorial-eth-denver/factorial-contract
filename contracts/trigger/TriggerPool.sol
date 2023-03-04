@@ -58,7 +58,7 @@ contract TriggerPool is AutomationCompatible {
         (uint256 checkPage) = abi.decode(_checkData, (uint256));
         upkeepNeeded = false;
         uint8[] memory statusArray = new uint8[](triggerCountPerPage);
-        for (uint i = checkPage * triggerCountPerPage; i < (checkPage + 1) * triggerCountPerPage; ++i) {
+        for (uint256 i = checkPage * triggerCountPerPage; i < (checkPage + 1) * triggerCountPerPage; ++i) {
             TriggerInfo memory triggerInfo = triggerInfos[uint24(i)];
             (bool success, bytes memory data) = triggerInfo.checkModule.staticcall(
                 triggerInfo.checkData
@@ -78,7 +78,7 @@ contract TriggerPool is AutomationCompatible {
 
     function performUpkeep(bytes calldata performData) external {
         (uint256 page, uint8[] memory statusArray) = abi.decode(performData, (uint256, uint8[]));
-        for (uint i = 0; i < triggerCountPerPage; ++i) {
+        for (uint256 i = 0; i < triggerCountPerPage; ++i) {
             TriggerInfo memory triggerInfo = triggerInfos[page * triggerCountPerPage + i];
             if (statusArray[i] == PERFORM) {
                 (bool success, bytes memory data) = triggerInfo.performModule.call(
@@ -92,7 +92,7 @@ contract TriggerPool is AutomationCompatible {
         }
     }
 
-    function cancelTrigger(uint _triggerId) external {
+    function cancelTrigger(uint256 _triggerId) external {
         delete triggerInfos[_triggerId];
     }
 }
