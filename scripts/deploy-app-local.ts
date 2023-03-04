@@ -103,6 +103,19 @@ async function main() {
 
     await liquidation.addModules([liquidationBasic.address, liquidationAuction.address]);
 
+    const [signer] = await ethers.getSigners();
+    const usdcAmount = ethers.BigNumber.from(10).pow(6).mul(2);
+    const wmaticAmount = ethers.BigNumber.from(10).pow(18).mul(2);
+    let depositCallData1 = lending.interface.encodeFunctionData("deposit",
+        [usdc.address, usdcAmount]);
+
+    const MAX = ethers.constants.MaxUint256;
+    const router = await ethers.getContractAt("FactorialRouter", config.FACTORIAL_ROUTER, signer) as FactorialRouter;
+    await router.execute(MAX, lending.address, depositCallData1);
+    let depositCallData2 = lending.interface.encodeFunctionData("deposit",
+        [wmatic.address, wmaticAmount]);
+    await router.execute(MAX, lending.address, depositCallData2);
+
     console.log("Deploy success ... 6/6 ");
 
     config.TRIGGER = trigger.address;
@@ -110,6 +123,7 @@ async function main() {
     config.LIQUIDATION_AUCTION = liquidationAuction.address;
     config.LENDING = lending.address;
     config.MARGIN = margin.address;
+    config.LYF = lyf.address;
     // ---------------------------write file-------------------------------
     fs.writeFileSync(writeFileAddress, JSON.stringify(config, null, 1));
 }
