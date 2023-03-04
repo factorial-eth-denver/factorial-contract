@@ -47,33 +47,18 @@ contract Margin is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         address debtAsset,
         uint256 debtAmount
     ) public {
-        console.log("open1");
         require(borrowCache.init == false, "already borrowed");
-        console.log("open2");
         borrowCache = BorrowCache(true, uint256(uint160(collateralAsset)), collateralAmount, uint256(uint160(debtAsset)), debtAmount);
-console.log("open3");
         asset.safeTransferFrom(msgSender(), address(this), uint256(uint160(collateralAsset)), collateralAmount, "");
-        console.log("open4");
         uint256 id = lending.borrowAndCallback(uint256(uint160(collateralAsset)), debtAsset, debtAmount);
-console.log("open5");
         asset.safeTransferFrom(address(this), msgSender(), id, 1, "");
-console.log("open6");
         delete borrowCache;
     }
 
     function borrowCallback() public override {
         require(borrowCache.init == true, "not borrowed");
-        console.log("two1");
-        console.log("borrowCache.debtAsset", borrowCache.debtAsset);
-        console.log("borrowCache.collateralAsset", borrowCache.collateralAsset);
-        console.log("borrowCache.debtAmount", borrowCache.debtAmount);
-        console.log("borrowCache.collateralAmount", borrowCache.collateralAmount);
-        console.log(asset.balanceOf(address(this), borrowCache.debtAsset));
-        console.log(asset.balanceOf(address(this), borrowCache.collateralAsset));
         int256[] memory amounts = sushi.sell(borrowCache.debtAsset, borrowCache.collateralAsset, borrowCache.debtAmount, 0);
-        console.log("two2");
         uint256 tokenAmount = borrowCache.collateralAmount + uint256(amounts[1]);
-        console.log("two3");
         asset.safeTransferFrom(address(this), msg.sender, borrowCache.collateralAsset, tokenAmount, "");
     }
 
@@ -94,8 +79,8 @@ console.log("open6");
         require(repayCache.init == true, "not repaid");
         uint256 beforeBalance = asset.balanceOf(address(this), repayCache.collateralAsset);
         sushi.buy(repayCache.collateralAsset, repayCache.debtAsset, repayCache.debtAmount, 0);
-        uint256 afterBalance = beforeBalance - asset.balanceOf(address(this), repayCache.collateralAsset);
-        uint256 returnAmount = repayCache.collateralAmount - (beforeBalance - afterBalance);
+        uint256 diffBalance = beforeBalance - asset.balanceOf(address(this), repayCache.collateralAsset);
+        uint256 returnAmount = repayCache.collateralAmount - diffBalance;
         asset.safeTransferFrom(
             address(this),
             msg.sender,
