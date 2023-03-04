@@ -160,13 +160,20 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
     }
 
     function burn(uint[] calldata _tokens, uint _amount) external override returns (uint, uint) {
+        // 0. Validate params
         require(_tokens.length == 2, 'Invalid params');
+
+        // 1. Before mint
         address lp = IUniswapV2Factory(sushiRouter.factory()).getPair(_tokens[0].toAddress(), _tokens[1].toAddress());
         IERC20Upgradeable(lp).approve(address(sushiRouter), _amount);
         asset.safeTransferFrom(msgSender(), address(this), lp, _amount);
+
+        // 2. Do mint
         (uint amountA, uint amountB) = sushiRouter.removeLiquidity(
             _tokens[0].toAddress(), _tokens[1].toAddress(), _amount, 0, 0, address(this), block.timestamp
         );
+
+        // 3. After mint
         asset.safeTransferFrom(address(this), msgSender(), _tokens[0], amountA, '');
         asset.safeTransferFrom(address(this), msgSender(), _tokens[1], amountB, '');
         return (amountA, amountB);
@@ -238,36 +245,34 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         lpToPoolId[lp] = pool;
     }
 
-    function getPoolId(uint _tokenA, uint _tokenB) external view returns (uint256) {
+    function getPoolId(uint _tokenA, uint _tokenB) external view override returns (uint256) {
         return lpToPoolId[getLP(_tokenA, _tokenB)];
     }
 
-    function getLP(uint _tokenA, uint _tokenB) public view returns (uint256) {
+    function getLP(uint _tokenA, uint _tokenB) public view override returns (uint256) {
         return uint256(uint160(IUniswapV2Factory(sushiRouter.factory()).getPair(_tokenA.toAddress(), _tokenB.toAddress())));
     }
 
-    function getNextTokenId(uint _pid) public view returns (uint256) {
+    function getNextTokenId(uint _pid) public view override returns (uint256) {
         uint24 connectionId = connectionBitMap.findFirstEmptySpace(connectionPool.getConnectionMax() / 256);
         return (wrapperTokenType << 232) + (uint256(connectionId) << 80) + (_pid);
     }
 
-    function occupyConnection() internal returns (uint24){
-        uint24 connectionId = connectionBitMap.findFirstEmptySpace(connectionPool.getConnectionMax() / 256);
-        connectionBitMap.occupy(connectionId);
-        return connectionId;
+    function getReserves(uint _tokenA, uint _tokenB) public view override returns (uint, uint){
+        address lp = getLP(_tokenA, _tokenB).toAddress();
+        (uint112 reserveA, uint112 reserveB,) = IUniswapV2Pair(lp).getReserves();
+        if (IUniswapV2Pair(lp).token0() == _tokenA.toAddress()) {
+            return (uint256(reserveA), uint256(reserveB));
+        }
+        return (uint256(reserveB), uint256(reserveA));
     }
 
-    function getReserves(uint _tokenA, uint _tokenB) public returns (uint, uint){
-        (uint112 reserveA, uint112 reserveB,) = IUniswapV2Pair(getLP(_tokenA, _tokenB).toAddress()).getReserves();
-        return (uint256(reserveA), uint256(reserveB));
-    }
-
-    function optiamlSwapAmount(
+    function optimalSwapAmount(
         uint tokenA,
         uint tokenB,
         uint amountA,
         uint amountB
-    ) external returns (uint swapAmt, bool isReversed) {
+    ) external override returns (uint swapAmt, bool isReversed) {
         (uint reserveA, uint reserveB) = getReserves(tokenA, tokenB);
         return optimalDeposit(amountA, amountB, reserveA, reserveB);
     }
@@ -304,5 +309,11 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         uint numerator = e - b;
         uint denominator = a * 2;
         return numerator / denominator;
+    }
+
+    function occupyConnection() internal returns (uint24){
+        uint24 connectionId = connectionBitMap.findFirstEmptySpace(connectionPool.getConnectionMax() / 256);
+        connectionBitMap.occupy(connectionId);
+        return connectionId;
     }
 }

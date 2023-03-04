@@ -106,7 +106,7 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
         uint256 tokenId,
         address _asset,
         uint256 _amount
-    ) external returns (uint256) {
+    ) external override returns (uint256) {
         asset.safeTransferFrom(
             address(this),
             msg.sender,
