@@ -23,6 +23,14 @@ contract SimpleBorrower is IBorrowable, ERC1155HolderUpgradeable, FactorialConte
     BorrowCache public borrowCache;
     BorrowCache public repayCache;
 
+    struct BorrowCache {
+        bool init;
+        uint256 collateralAsset;
+        uint256 collateralAmount;
+        uint256 debtAsset;
+        uint256 debtAmount;
+    }
+
     function initialize(
         address _tokenization,
         address _asset,

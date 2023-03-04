@@ -72,6 +72,7 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
     function deposit(address _asset, uint256 _amount) external {
         require(banks[_asset].isWhitelisted, "Lending: asset not whitelisted");
 
+        console.log("lending deposit 1");
         asset.safeTransferFrom(
             msgSender(),
             address(this),
@@ -79,9 +80,12 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
             _amount,
             ""
         );
+        console.log("lending deposit 2");
 
         uint256 share = convertToShare(_asset, _amount);
+        console.log("lending deposit 3");
         _mint(msgSender(), uint256(uint160(_asset)), share, "");
+        console.log("lending deposit 4");
     }
 
     function withdraw(address _asset, uint256 _amount) external {

@@ -6,16 +6,16 @@ import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "./Lending.sol";
 import "../connector/sushi/SushiswapConnector.sol";
 import "../valuation/Tokenization.sol";
+import "../../interfaces/ILending.sol";
 import "../../interfaces/IBorrowable.sol";
 import "../../contracts/valuation/wrapper/SyntheticNFT.sol";
 import "../../contracts/valuation/wrapper/DebtNFT.sol";
 
 contract Margin is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
     DebtNFT public debtNFT;
-    Lending public lending;
+    ILending public lending;
     SushiswapConnector public sushi;
 
     BorrowCache public borrowCache;
@@ -35,7 +35,7 @@ contract Margin is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         address _deptNFT,
         address _sushi
     ) public initContext(_asset) {
-        lending = Lending(_lending);
+        lending = ILending(_lending);
         debtNFT = DebtNFT(_deptNFT);
         sushi = SushiswapConnector(_sushi);
     }
@@ -47,22 +47,33 @@ contract Margin is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         address debtAsset,
         uint256 debtAmount
     ) public {
+        console.log("open1");
         require(borrowCache.init == false, "already borrowed");
+        console.log("open2");
         borrowCache = BorrowCache(true, uint256(uint160(collateralAsset)), collateralAmount, uint256(uint160(debtAsset)), debtAmount);
-
+console.log("open3");
         asset.safeTransferFrom(msgSender(), address(this), uint256(uint160(collateralAsset)), collateralAmount, "");
+        console.log("open4");
         uint256 id = lending.borrowAndCallback(uint256(uint160(collateralAsset)), debtAsset, debtAmount);
-
+console.log("open5");
         asset.safeTransferFrom(address(this), msgSender(), id, 1, "");
-
+console.log("open6");
         delete borrowCache;
     }
 
     function borrowCallback() public override {
         require(borrowCache.init == true, "not borrowed");
+        console.log("two1");
+        console.log("borrowCache.debtAsset", borrowCache.debtAsset);
+        console.log("borrowCache.collateralAsset", borrowCache.collateralAsset);
+        console.log("borrowCache.debtAmount", borrowCache.debtAmount);
+        console.log("borrowCache.collateralAmount", borrowCache.collateralAmount);
+        console.log(asset.balanceOf(address(this), borrowCache.debtAsset));
+        console.log(asset.balanceOf(address(this), borrowCache.collateralAsset));
         int256[] memory amounts = sushi.sell(borrowCache.debtAsset, borrowCache.collateralAsset, borrowCache.debtAmount, 0);
+        console.log("two2");
         uint256 tokenAmount = borrowCache.collateralAmount + uint256(amounts[1]);
-
+        console.log("two3");
         asset.safeTransferFrom(address(this), msg.sender, borrowCache.collateralAsset, tokenAmount, "");
     }
 
