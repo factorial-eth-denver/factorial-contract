@@ -176,11 +176,11 @@ contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         (uint256 assetA, uint assetB) = ISwapConnector(sushiConnector).getUnderlyingAssets(lp);
 
         /// 2. Withdraw & burn
-        ISwapConnector(sushiConnector).withdraw(repayCache.collateralAsset, repayCache.collateralAmount);
+        uint256 amount = ISwapConnector(sushiConnector).withdraw(repayCache.collateralAsset, repayCache.collateralAmount);
         uint256[] memory assets = new uint256[](2);
         assets[0] = assetA;
         assets[1] = assetB;
-        (uint256 amtA, uint256 amtB) = ISwapConnector(sushiConnector).burn(assets, repayCache.collateralAmount);
+        (uint256 amtA, uint256 amtB) = ISwapConnector(sushiConnector).burn(assets, amount);
 
         /// 3. Swap for repay
         if (assetA == debtToken) {
