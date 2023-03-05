@@ -12,11 +12,13 @@ import "../../interfaces/ILending.sol";
 import "../../interfaces/IBorrowable.sol";
 import "../../contracts/valuation/wrapper/SyntheticNFT.sol";
 import "../../contracts/valuation/wrapper/DebtNFT.sol";
+import "../forDenver/Logging.sol";
 
 contract Margin is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
     DebtNFT public debtNFT;
     ILending public lending;
     SushiswapConnector public sushi;
+    Logging public logging;
 
     BorrowCache public borrowCache;
     BorrowCache public repayCache;
@@ -33,14 +35,15 @@ contract Margin is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         address _asset,
         address _lending,
         address _deptNFT,
-        address _sushi
+        address _sushi,
+        address _logging
     ) public initContext(_asset) {
         lending = ILending(_lending);
         debtNFT = DebtNFT(_deptNFT);
         sushi = SushiswapConnector(_sushi);
+        logging = Logging(_logging);
     }
 
-    // 깊은게 아니라 단순 토큰0을 담보로 토큰1을 빌려서 페어를 넣는다.
     function open(
         address collateralAsset,
         uint256 collateralAmount,
@@ -52,6 +55,7 @@ contract Margin is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         asset.safeTransferFrom(msgSender(), address(this), uint256(uint160(collateralAsset)), collateralAmount, "");
         uint256 id = lending.borrowAndCallback(uint256(uint160(collateralAsset)), debtAsset, debtAmount);
         asset.safeTransferFrom(address(this), msgSender(), id, 1, "");
+        logging.add(msgSender(), id, false);
         delete borrowCache;
     }
 
