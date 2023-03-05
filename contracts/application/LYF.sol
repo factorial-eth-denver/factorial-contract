@@ -64,7 +64,6 @@ contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         logging = Logging(_logging);
     }
 
-    // 깊은게 아니라 단순 토큰0을 담보로 토큰1을 빌려서 페어를 넣는다.
     function open(
         uint256[] memory assets,
         uint256[] memory amounts,

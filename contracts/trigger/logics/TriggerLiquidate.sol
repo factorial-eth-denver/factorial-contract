@@ -5,9 +5,6 @@ import "../../../interfaces/ITriggerLogic.sol";
 import "../../valuation/Tokenization.sol";
 import "../../valuation/wrapper/DebtNFT.sol";
 
-// Uncomment this line to use console.log
-import "hardhat/console.sol";
-
 contract TriggerLogicLiquidate is ITriggerLogic {
 
     Tokenization public  tokenization;

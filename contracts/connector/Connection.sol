@@ -7,7 +7,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "../../interfaces/IConnection.sol";
 import "../../interfaces/IConnectionPool.sol";
 
-import "hardhat/console.sol";
 contract Connection is IConnection{
     using SafeERC20Upgradeable for IERC20Upgradeable;
 

@@ -66,7 +66,6 @@ contract Margin is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         asset.safeTransferFrom(address(this), msg.sender, borrowCache.collateralAsset, tokenAmount, "");
     }
 
-    // 포지션을 뭘로받을지 정해야한다.
     function close(uint256 debtId) public {
         require(repayCache.init == false, "already repaid");
         repayCache.init = true;

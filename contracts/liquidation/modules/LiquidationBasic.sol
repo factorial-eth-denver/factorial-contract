@@ -7,9 +7,6 @@ import "../../valuation/wrapper/DebtNFT.sol";
 import "../../../interfaces/ILending.sol";
 import "../Liquidation.sol";
 
-// Uncomment this line to use console.log
-// import "hardhat/console.sol";
-
 contract LiquidationBasic is ILiquidationModule {
     Liquidation public liquidation;
     Tokenization public tokenization;
@@ -18,7 +15,7 @@ contract LiquidationBasic is ILiquidationModule {
     uint256 liquidateBonusRatio = 0.05e18;
 
     struct ExecuteParams {
-        address prevOwner; // 이게문제가 안될까?
+        address prevOwner;
     }
 
     constructor(address _liquidation, address _tokenization, address _debtNFT) {
