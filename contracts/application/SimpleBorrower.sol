@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
-
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
@@ -14,7 +12,6 @@ import "../../contracts/valuation/wrapper/DebtNFT.sol";
 import "./Lending.sol";
 
 contract SimpleBorrower is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
-    // UniConnector public uni;
     Tokenization public tokenization;
     SyntheticNFT public syntheticNFT;
     DebtNFT public debtNFT;
@@ -44,7 +41,6 @@ contract SimpleBorrower is IBorrowable, ERC1155HolderUpgradeable, FactorialConte
         debtNFT = DebtNFT(_deptNFT);
     }
 
-    // 깊은게 아니라 단순 토큰0을 담보로 토큰1을 빌려서 페어를 넣는다.
     function borrow(
         address collateralAsset,
         uint256 collateralAmount,
@@ -59,7 +55,6 @@ contract SimpleBorrower is IBorrowable, ERC1155HolderUpgradeable, FactorialConte
         uint24 syntheticNFTTypeId = 8519684;
         uint256 tokenId = syntheticNFT.getNextTokenId(address(this), syntheticNFTTypeId);
         uint256 id = lending.borrowAndCallback(tokenId, debtAsset, debtAmount);
-        // console.log("tokenId", id);
 
         asset.safeTransferFrom(address(this), msgSender(), id, 1, "");
     }
@@ -87,7 +82,6 @@ contract SimpleBorrower is IBorrowable, ERC1155HolderUpgradeable, FactorialConte
         borrowCache.init = false;
     }
 
-    // 포지션을 뭘로받을지 정해야한다.
     function repay(uint256 debtId) public {
         require(repayCache.init == false, "already repaid");
         repayCache.init = true;
@@ -126,7 +120,7 @@ contract SimpleBorrower is IBorrowable, ERC1155HolderUpgradeable, FactorialConte
             if (tokens[i] == uint256(uint160(repayCache.debtAsset))) {
                 if (repayCache.debtAmount > amounts[i]) {
                     asset.safeTransferFrom(
-                        asset.caller(), // 이렇게해도되나?
+                        asset.caller(),
                         address(this), 
                         tokens[i], 
                         repayCache.debtAmount - amounts[i],

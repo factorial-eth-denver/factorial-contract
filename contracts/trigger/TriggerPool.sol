@@ -8,9 +8,6 @@ import "../../interfaces/ITriggerLogic.sol";
 import "../valuation/Tokenization.sol";
 import "./library/TriggerBitmap.sol";
 
-// Uncomment this line to use console.log
-// import "hardhat/console.sol";
-
 contract TriggerPool is AutomationCompatible {
     using TriggerBitmap for mapping(uint256 => uint256);
 

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
-
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
@@ -118,10 +116,8 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
             uint256(uint160(_asset)),
             _amount
         );
-        // 추가해줘야함
         uint24 debtTypeId = 8585218;
 
-        // console.log("liquidationModule", abi.encode(tokenId, amount, liquidationModule));
         uint256 debtId = tokenization.wrap(
             debtTypeId,
             abi.encode(tokenId, amount, liquidationModule)
@@ -132,9 +128,6 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
 
         uint256 collValue = tokenization.getValue(tokenId, amount);
         uint256 debtValue = tokenization.getValue(uint256(uint160(_asset)), _amount);
-        console.log("collValue", collValue);
-        console.log("debtValue", debtValue);
-
         require(valueWithFactor != 0, "Lending: insufficient collateral");
 
         uint256 liquidationValue = Math.mulDiv(borrowFactor, borrowValue, 1e6);

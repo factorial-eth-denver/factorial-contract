@@ -16,9 +16,6 @@ import "../../../interfaces/ITrigger.sol";
 import "../../../interfaces/IAsset.sol";
 
 import "../../utils/FactorialContext.sol";
-import "hardhat/console.sol";
-
-
 contract SyntheticNFT is OwnableUpgradeable, IWrapper, ERC1155HolderUpgradeable, FactorialContext {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using MathUpgradeable for uint256;
