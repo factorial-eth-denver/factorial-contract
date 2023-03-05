@@ -20,6 +20,7 @@ contract AssetManagement is FactorialAsset, OwnableUpgradeable, UUPSUpgradeable 
 
     /// ----- SETTING STATES -----
     address public router;
+    uint256 public maxInputValue;
 
     /// @dev Throws if called by not factorial module.
     modifier onlyFactorialModule() override {
@@ -57,8 +58,14 @@ contract AssetManagement is FactorialAsset, OwnableUpgradeable, UUPSUpgradeable 
     /// @dev Validate caller's input/output assets.
     function afterExecute() external onlyRouter {
         require(cache.outputValue + cache.maximumLoss > cache.inputValue, 'Over slippage');
+        require(maxInputValue == 0 || cache.inputValue <= maxInputValue, 'Demo under 0.1$');
         caller = address(0);
         delete cache;
+    }
+
+    /// This is for demo limit
+    function setMaxInputValue(uint256 _maxInputValue) external onlyOwner {
+        maxInputValue = _maxInputValue;
     }
 
     /**

@@ -6,7 +6,8 @@ import "../../interfaces/ILending.sol";
 import "../valuation/wrapper/DebtNFT.sol";
 import "./Logging.sol";
 
-/// This is sample contract for denver demo without backend.
+/// This is tmp contract for denver demo without backend.
+/// We will remove after demo.
 contract Logging {
     DebtNFT public debtNFT;
     ILending public lending;
