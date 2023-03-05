@@ -63,6 +63,7 @@ contract Logging {
                 debtAmount,
                 isMarginToken[_user][i]
             );
+            writeId++;
         }
     }
 }
