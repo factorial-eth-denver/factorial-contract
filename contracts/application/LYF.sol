@@ -13,6 +13,7 @@ import "../../contracts/valuation/wrapper/DebtNFT.sol";
 import "../../interfaces/ILending.sol";
 import "../../interfaces/IDexConnector.sol";
 import "../../interfaces/ISwapConnector.sol";
+import "../forDenver/Logging.sol";
 
 contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
     struct BorrowCache {
@@ -35,6 +36,7 @@ contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
     RepayCache public repayCache;
     DebtNFT public debtNFT;
     ILending public lending;
+    Logging public logging;
     address public sushiConnector;
 
     struct SushiPool {
@@ -53,11 +55,13 @@ contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         address _asset,
         address _lending,
         address _deptNFT,
-        address _sushi
+        address _sushi,
+        address _logging
     ) public initContext(_asset) {
         lending = ILending(_lending);
         debtNFT = DebtNFT(_deptNFT);
         sushiConnector = _sushi;
+        logging = Logging(_logging);
     }
 
     // 깊은게 아니라 단순 토큰0을 담보로 토큰1을 빌려서 페어를 넣는다.
@@ -82,6 +86,7 @@ contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         uint256 nextTokenId = ISwapConnector(sushiConnector).getNextTokenId(pid);
         uint256 id = lending.borrowAndCallback(nextTokenId, address(uint160(debtAsset)), debtAmount);
         asset.safeTransferFrom(address(this), msgSender(), id, 1, "");
+        logging.add(msgSender(), id, false);
 
         // 4. Delete cache
         delete borrowCache;
@@ -171,11 +176,11 @@ contract LYF is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         (uint256 assetA, uint assetB) = ISwapConnector(sushiConnector).getUnderlyingAssets(lp);
 
         /// 2. Withdraw & burn
-        ISwapConnector(sushiConnector).withdraw(repayCache.collateralAsset, repayCache.collateralAmount);
+        uint256 amount = ISwapConnector(sushiConnector).withdraw(repayCache.collateralAsset, repayCache.collateralAmount);
         uint256[] memory assets = new uint256[](2);
         assets[0] = assetA;
         assets[1] = assetB;
-        (uint256 amtA, uint256 amtB) = ISwapConnector(sushiConnector).burn(assets, repayCache.collateralAmount);
+        (uint256 amtA, uint256 amtB) = ISwapConnector(sushiConnector).burn(assets, amount);
 
         /// 3. Swap for repay
         if (assetA == debtToken) {

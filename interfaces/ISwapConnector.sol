@@ -10,7 +10,7 @@ interface ISwapConnector {
 
     function depositExist(uint _tokenId, uint _amount) external;
 
-    function withdraw(uint _tokenId, uint _amount) external;
+    function withdraw(uint _tokenId, uint _amount) external returns (uint256);
 
     function getPoolId(uint _tokenA, uint _tokenB) external view returns (uint256);
 
