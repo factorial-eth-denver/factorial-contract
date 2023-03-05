@@ -4,9 +4,6 @@ pragma solidity ^0.8.0;
 import "../../../interfaces/ITriggerLogic.sol";
 import "../../valuation/Tokenization.sol";
 
-// Uncomment this line to use console.log
-// import "hardhat/console.sol";
-
 contract TriggerLogicTakeProfit is ITriggerLogic {
 
     Tokenization tokenization;

@@ -3,8 +3,6 @@ pragma solidity >=0.5.0;
 
 import "../../library/BitMath.sol";
 
-import "hardhat/console.sol";
-
 library TriggerBitmap {
     using BitMath for uint;
 

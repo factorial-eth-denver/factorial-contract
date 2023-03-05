@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
-
 import "@chainlink/contracts/src/v0.8/AutomationCompatible.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
@@ -11,9 +9,6 @@ import "./library/TriggerBitmap.sol";
 import "../utils/FactorialContext.sol";
 import "../valuation/Tokenization.sol";
 import "../../interfaces/ITriggerLogic.sol";
-
-// Uncomment this line to use console.log
-// import "hardhat/console.sol";
 
 contract Trigger is AutomationCompatible, OwnableUpgradeable, FactorialContext {
     using TriggerBitmap for mapping(uint256 => uint256);
@@ -56,10 +51,9 @@ contract Trigger is AutomationCompatible, OwnableUpgradeable, FactorialContext {
         triggerTypeId++;
     }
 
-    // 가지고 있어야
     function registerTrigger(
         address owner,
-        uint256 collateralToken, // 토큰을 가지고 있는사람만 본인이 등록가능해야함.
+        uint256 collateralToken,
         uint256 collateralAmount,
         uint256 triggerLogicId,
         bytes calldata triggerCheckData,
@@ -86,7 +80,6 @@ contract Trigger is AutomationCompatible, OwnableUpgradeable, FactorialContext {
         emit RegisterTrigger(triggerId);
     }
 
-    // owner가 적혀야되는지 정확한 판단되는지 청산취소못하게 되는지.
     function cancelTrigger(uint256 triggerId) public {
         TriggerInfo storage triggerInfo = triggerInfos[triggerId];
 

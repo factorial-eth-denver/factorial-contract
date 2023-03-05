@@ -1,36 +1,13 @@
-import {
-    DEBT_NFT_TOKEN_TYPE, MaxUint128,
-    SUSHI_NFT_TOKEN_TYPE,
-    SYNTHETIC_FT_TOKEN_TYPE,
-    SYNTHETIC_NFT_TOKEN_TYPE
-} from "./constants";
-
 const fs = require('fs');
 import {ethers} from "hardhat";
 import hre from 'hardhat'
 import {
-    AssetManagement,
-    ChainlinkOracle,
-    ConnectionPool,
-    DebtNFT,
-    ERC20Asset,
-    FactorialRouter,
     MockERC20__factory,
-    OracleRouter,
-    SimplePriceOracle,
-    SushiswapConnector,
-    SushiswapV2NFT,
-    SyntheticFT,
-    SyntheticNFT,
-    TestHelper,
-    Tokenization,
-    UniswapV2Oracle,
     WrappedNativeToken__factory,
     MockTriggerHandler,
     Margin,
-    IUniswapV2Pair,
-    IUniswapV2Router,
     LYF,
+    FactorialRouter,
     SimpleBorrower,
     Lending,
     Trigger,
@@ -41,7 +18,6 @@ import {
     TriggerLogicTakeProfit,
     TriggerLogicMaturity,
     TriggerLogicLiquidate,
-    WrappedNativeToken,
     Logging
 } from "../typechain";
 
@@ -106,6 +82,7 @@ async function main() {
         config.SYNTHETIC_NFT,
         config.DEBT_NFT
     );
+    await logging.initialize(config.DEBT_NFT,config.LENDING);
     await trigger.initialize(config.ASSET_MANAGEMENT, 20, 50);
     await liquidation.initialize(config.TOKENIZATION, config.DEBT_NFT, trigger.address, config.ASSET_MANAGEMENT);
     await liquidationAuction.initialize(liquidation.address, config.TOKENIZATION, config.DEBT_NFT, config.ASSET_MANAGEMENT);

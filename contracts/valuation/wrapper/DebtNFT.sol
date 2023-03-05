@@ -18,8 +18,6 @@ import "../../utils/FactorialContext.sol";
 
 import "../../connector/library/SafeCastUint256.sol";
 
-import "hardhat/console.sol";
-
 contract DebtNFT is OwnableUpgradeable, ERC1155HolderUpgradeable, IWrapper, FactorialContext {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using MathUpgradeable for uint256;

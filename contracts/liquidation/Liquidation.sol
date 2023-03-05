@@ -11,9 +11,6 @@ import "../../interfaces/ILending.sol";
 import "../../interfaces/IAsset.sol";
 import "../../interfaces/IRepayable.sol";
 
-
-import "hardhat/console.sol";
-
 contract Liquidation is IRepayable, OwnableUpgradeable, FactorialContext, ERC1155HolderUpgradeable {
     Tokenization public tokenization;
     DebtNFT public debtNFT;
@@ -49,7 +46,6 @@ contract Liquidation is IRepayable, OwnableUpgradeable, FactorialContext, ERC115
         uint256 tokenId,
         bytes calldata data
     ) public onlyTrigger {
-        console.log("Liquidation - execute");
         require(
             address(modules[liquidationModule]) != address(0),
             "Not registered"

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
+<<<<<<< HEAD
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
@@ -18,6 +19,14 @@ import "../valuation/wrapper/DebtNFT.sol";
 import "./Logging.sol";
 
 /// This is sample contract for denver demo without backend.
+=======
+import "../../interfaces/ILending.sol";
+import "../valuation/wrapper/DebtNFT.sol";
+import "./Logging.sol";
+
+/// This is tmp contract for denver demo without backend.
+/// We will remove after demo.
+>>>>>>> aa15d9cd4cf6eaa6dd3e2809ee4f9c38d629b664
 contract Logging {
     DebtNFT public debtNFT;
     ILending public lending;
@@ -60,18 +69,19 @@ contract Logging {
         uint writeId = 0;
         for (uint256 i = 0; i < length; i++) {
             uint tokenId = tokens[_user][i];
-            (uint collateralToken, uint collateralAmount, ) = debtNFT.tokenInfos(tokenId);
+            (uint collateralToken, uint collateralAmount,) = debtNFT.tokenInfos(tokenId);
             if (collateralAmount == 0) {
                 continue;
             }
             (uint256 debtTokenId, uint256 debtAmount) = lending.getDebt(tokenId);
-            positions[writeId].tokenId = tokenId;
-            positions[writeId].collateralToken = collateralToken;
-            positions[writeId].collateralAmount = collateralAmount;
-            positions[writeId].debtToken = debtTokenId;
-            positions[writeId].debtAmount = debtAmount;
-            positions[writeId].isMargin = isMarginToken[_user][i];
-            writeId ++;
+            positions[writeId] = Position(
+                tokenId,
+                collateralToken,
+                collateralAmount,
+                debtTokenId,
+                debtAmount,
+                isMarginToken[_user][i]
+            );
         }
     }
 }

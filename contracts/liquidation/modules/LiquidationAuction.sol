@@ -14,9 +14,6 @@ import "../../valuation/Tokenization.sol";
 import "../../valuation/wrapper/DebtNFT.sol";
 import "../Liquidation.sol";
 
-// Uncomment this line to use console.log
-// import "hardhat/console.sol";
-
 contract LiquidationAuction is ILiquidationModule, OwnableUpgradeable, FactorialContext, ERC1155HolderUpgradeable {
     Liquidation public liquidation;
     Tokenization public tokenization;
