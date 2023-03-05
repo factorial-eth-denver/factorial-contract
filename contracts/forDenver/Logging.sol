@@ -34,6 +34,7 @@ contract Logging {
     }
 
     struct Position {
+        uint256 tokenId;
         uint256 collateralToken;
         uint256 collateralAmount;
         uint256 debtToken;
@@ -64,6 +65,7 @@ contract Logging {
                 continue;
             }
             (uint256 debtTokenId, uint256 debtAmount) = lending.getDebt(tokenId);
+            positions[writeId].tokenId = tokenId;
             positions[writeId].collateralToken = collateralToken;
             positions[writeId].collateralAmount = collateralAmount;
             positions[writeId].debtToken = debtTokenId;

@@ -71,6 +71,7 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
 
     function deposit(address _asset, uint256 _amount) external {
         require(banks[_asset].isWhitelisted, "Lending: asset not whitelisted");
+        banks[_asset].totalDeposit += _amount;
 
         asset.safeTransferFrom(
             msgSender(),
@@ -84,6 +85,8 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
     }
 
     function withdraw(address _asset, uint256 _amount) external {
+         banks[_asset].totalDeposit -= _amount;
+
         uint256 share = convertToShare(_asset, _amount);
         _burn(msgSender(), uint256(uint160(_asset)), share);
         

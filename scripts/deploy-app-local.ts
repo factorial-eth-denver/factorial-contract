@@ -111,6 +111,7 @@ async function main() {
     await liquidationAuction.initialize(liquidation.address, config.TOKENIZATION, config.DEBT_NFT, config.ASSET_MANAGEMENT);
     await margin.initialize(config.ASSET_MANAGEMENT, lending.address, config.DEBT_NFT, config.SUSHI_CONNECTOR, logging.address);
     await lyf.initialize(config.ASSET_MANAGEMENT, config.LENDING, config.DEBT_NFT, config.SUSHI_CONNECTOR, logging.address);
+    await logging.initialize(config.DEBT_NFT, lending.address);
     
     await lending.addBank(usdc.address);
     await lending.addBank(wmatic.address);
@@ -145,6 +146,7 @@ async function main() {
     config.LENDING = lending.address;
     config.MARGIN = margin.address;
     config.LEVERAGE_YIELD_FARMING = lyf.address;
+    config.LOGGING = logging.address;
     // ---------------------------write file-------------------------------
     fs.writeFileSync(writeFileAddress, JSON.stringify(config, null, 1));
 }

@@ -44,7 +44,6 @@ contract Margin is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         logging = Logging(_logging);
     }
 
-    // 깊은게 아니라 단순 토큰0을 담보로 토큰1을 빌려서 페어를 넣는다.
     function open(
         address collateralAsset,
         uint256 collateralAmount,
@@ -67,7 +66,6 @@ contract Margin is IBorrowable, ERC1155HolderUpgradeable, FactorialContext {
         asset.safeTransferFrom(address(this), msg.sender, borrowCache.collateralAsset, tokenAmount, "");
     }
 
-    // 포지션을 뭘로받을지 정해야한다.
     function close(uint256 debtId) public {
         require(repayCache.init == false, "already repaid");
         repayCache.init = true;
