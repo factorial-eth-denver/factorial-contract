@@ -2,31 +2,12 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
-<<<<<<< HEAD
-import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "../connector/sushi/SushiswapConnector.sol";
-import "../valuation/Tokenization.sol";
-import "../../interfaces/ILending.sol";
-import "../../interfaces/IBorrowable.sol";
-import "../../contracts/valuation/wrapper/SyntheticNFT.sol";
-import "../../contracts/valuation/wrapper/DebtNFT.sol";
-import "./Logging.sol";
-import "../valuation/wrapper/DebtNFT.sol";
-import "../valuation/wrapper/DebtNFT.sol";
-import "./Logging.sol";
-
-/// This is sample contract for denver demo without backend.
-=======
 import "../../interfaces/ILending.sol";
 import "../valuation/wrapper/DebtNFT.sol";
 import "./Logging.sol";
 
 /// This is tmp contract for denver demo without backend.
 /// We will remove after demo.
->>>>>>> aa15d9cd4cf6eaa6dd3e2809ee4f9c38d629b664
 contract Logging {
     DebtNFT public debtNFT;
     ILending public lending;

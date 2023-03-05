@@ -97,7 +97,6 @@ contract Lending is ILending, ERC1155Upgradeable, ERC1155SupplyUpgradeable, Owna
         );
     }
 
-    // [수정] erc20 -> erc1155
     function borrowAndCallback(
         uint256 tokenId,
         address _asset,

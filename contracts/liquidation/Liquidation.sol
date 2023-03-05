@@ -62,7 +62,7 @@ contract Liquidation is IRepayable, OwnableUpgradeable, FactorialContext, ERC115
 
         ILiquidationModule module = modules[liquidationModule];
         address liquidator = asset.caller();
-        module.execute(liquidator, tokenId, data); //[수정]
+        module.execute(liquidator, tokenId, data);
     }
 
     function liquidate(
