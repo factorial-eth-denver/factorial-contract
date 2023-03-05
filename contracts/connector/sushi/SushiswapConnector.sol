@@ -63,6 +63,7 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         address lp = IUniswapV2Factory(sushiRouter.factory()).getPair(_yourToken.toAddress(), _wantToken.toAddress());
 
         // 1. Calculate amount in
+        amounts = new int[](2);
         bool zeroToOne = false;
         uint256 amountIn;
         {
@@ -78,6 +79,7 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
             uint256 denominator = (reserveOut - _amount) * 997;
             amountIn = (numerator / denominator) + 1;
         }
+        if(amountIn == 0 || _amount == 0) return amounts;
 
         // 2. Swap
         asset.safeTransferFrom(msgSender(), address(this), _yourToken, amountIn, '');
@@ -89,7 +91,6 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         }
 
         // Make return data
-        amounts = new int[](2);
         amounts[0] = int256(amountIn) * - 1;
         amounts[1] = int256(_amount);
         asset.safeTransferFrom(address(this), msgSender(), _wantToken, _amount, '');
@@ -100,6 +101,7 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         address lp = IUniswapV2Factory(sushiRouter.factory()).getPair(_yourToken.toAddress(), _wantToken.toAddress());
 
         // 1. Calculate amount out
+        amounts = new int[](2);
         bool zeroToOne = false;
         uint256 amountOut;
         {
@@ -116,6 +118,7 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
             uint256 denominator = (reserveIn * 1000) + amountInWithFee;
             amountOut = numerator / denominator;
         }
+        if(amountOut == 0 || _amount == 0) return amounts;
 
         // 2. Swap
         asset.safeTransferFrom(msgSender(), address(this), _yourToken, _amount, '');
@@ -127,7 +130,6 @@ contract SushiswapConnector is IDexConnector, ISwapConnector, OwnableUpgradeable
         }
 
         // 3. Make return data
-        amounts = new int[](2);
         amounts[0] = int256(_amount) * - 1;
         amounts[1] = int256(amountOut);
         asset.safeTransferFrom(address(this), msgSender(), _wantToken, amountOut, '');
